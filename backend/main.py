@@ -15,7 +15,7 @@ from services.google_sheets_service import google_sheets_service
 from services.resume_parser import resume_parser
 from config import config
 from ai_interview import router as interview_router
-app.include_router(interview_router)
+
 
 app = FastAPI(title="AI Candidate Screening API", version="1.0.0")
 app.include_router(interview_router)
@@ -380,4 +380,5 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
