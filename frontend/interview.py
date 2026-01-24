@@ -1,64 +1,60 @@
-
 import streamlit as st
 import requests
-import time
 
 BACKEND_URL = st.secrets.get("BACKEND_URL", "")
 
-params = st.query_params
-if "candidate_id" not in params:
-    st.error("Invalid interview link")
-    st.stop()
+def render(candidate_id: str):
+    st.title("AI Voice Interview")
 
-cid = params["candidate_id"]
+    if "question" not in st.session_state:
+        r = requests.post(
+            f"{BACKEND_URL}/ai-interview/next",
+            json={"candidate_id": candidate_id}
+        )
+        r.raise_for_status()
+        st.session_state.question = r.json()["question"]
 
-st.title("AI Voice Interview")
+    st.components.v1.html(f'''
+    <script>
+    function speak() {{
+      speechSynthesis.speak(
+        new SpeechSynthesisUtterance("{st.session_state.question}")
+      );
+    }}
 
-if "question" not in st.session_state:
-    r = requests.post(
-        f"{BACKEND_URL}/ai-interview/next",
-        json={"candidate_id": cid}
-    )
-    st.session_state.question = r.json()["question"]
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SpeechRecognition();
+    rec.lang = "en-US";
 
-st.components.v1.html(f'''
-<script>
-function speak() {{
-  speechSynthesis.speak(
-    new SpeechSynthesisUtterance("{st.session_state.question}")
-  );
-}}
+    function startRec() {{
+      rec.start();
+    }}
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const rec = new SpeechRecognition();
-rec.lang = "en-US";
+    rec.onresult = e => {{
+      document.getElementById("ans").value = e.results[0][0].transcript;
+    }};
+    </script>
 
-function startRec() {{
-  rec.start();
-}}
+    <h3>Question</h3>
+    <p>{st.session_state.question}</p>
+    <button onclick="speak()">🔊 Listen</button><br><br>
+    <textarea id="ans" rows="4" cols="70"></textarea><br>
+    <button onclick="startRec()">🎙 Speak Answer</button>
+    ''', height=400)
 
-rec.onresult = e => {{
-  document.getElementById("ans").value = e.results[0][0].transcript;
-}};
-</script>
+    answer = st.text_area("Edit answer if needed")
 
-<h3>Question</h3>
-<p>{st.session_state.question}</p>
-<button onclick="speak()">🔊 Listen</button><br><br>
-<textarea id="ans" rows="4" cols="70"></textarea><br>
-<button onclick="startRec()">🎙 Speak Answer</button>
-''', height=400)
+    if st.button("Submit Answer"):
+        requests.post(
+            f"{BACKEND_URL}/ai-interview/evaluate",
+            json={"candidate_id": candidate_id, "answer": answer}
+        ).raise_for_status()
 
-answer = st.text_area("Edit answer if needed")
+        r = requests.post(
+            f"{BACKEND_URL}/ai-interview/next",
+            json={"candidate_id": candidate_id, "answer": answer}
+        )
+        r.raise_for_status()
 
-if st.button("Submit Answer"):
-    requests.post(
-        f"{BACKEND_URL}/ai-interview/evaluate",
-        json={"candidate_id": cid, "answer": answer}
-    )
-    r = requests.post(
-        f"{BACKEND_URL}/ai-interview/next",
-        json={"candidate_id": cid, "answer": answer}
-    )
-    st.session_state.question = r.json()["question"]
-    st.experimental_rerun()
+        st.session_state.question = r.json()["question"]
+        st.experimental_rerun()
