@@ -4,6 +4,8 @@ from googleapiclient.discovery import build
 from config import config
 from database import supabase
 from datetime import datetime
+from services.email_service import email_service
+
 
 class GoogleSheetsService:
     def __init__(self):
@@ -35,7 +37,6 @@ class GoogleSheetsService:
             ).execute()
 
             values = result.get('values', [])
-
             if not values:
                 return {"success": False, "error": "No data found in sheet"}
 
@@ -53,17 +54,20 @@ class GoogleSheetsService:
                     if not email:
                         continue
 
-                    candidate_result = supabase.table("candidates")\
-                        .select("id, status")\
-                        .eq("email", email)\
-                        .maybeSingle()\
+                    candidate_result = supabase.table("candidates") \
+                        .select("id, status, name") \
+                        .eq("email", email) \
+                        .maybeSingle() \
                         .execute()
 
                     if not candidate_result.data:
                         continue
 
-                    candidate_id = candidate_result.data['id']
+                    candidate_id = candidate_result.data["id"]
+                    candidate_status = candidate_result.data["status"]
+                    candidate_name = candidate_result.data.get("name", "Candidate")
 
+                    # ---------- Build form data ----------
                     portfolio_links = []
                     if row_dict.get('Portfolio URL'):
                         portfolio_links.append(row_dict['Portfolio URL'])
@@ -85,34 +89,51 @@ class GoogleSheetsService:
                         "availability": row_dict.get('When can you start?', ''),
                         "salary_expectations": row_dict.get('Expected Salary', ''),
                         "additional_info": {
-                            key: value for key, value in row_dict.items()
-                            if key not in ['Email Address', 'Timestamp', 'Portfolio URL',
-                                         'GitHub URL', 'LinkedIn URL']
+                            k: v for k, v in row_dict.items()
+                            if k not in [
+                                'Email Address',
+                                'Timestamp',
+                                'Portfolio URL',
+                                'GitHub URL',
+                                'LinkedIn URL'
+                            ]
                         },
-                        "form_submitted_at": row_dict.get('Timestamp', datetime.utcnow().isoformat())
+                        "form_submitted_at": row_dict.get(
+                            'Timestamp', datetime.utcnow().isoformat()
+                        )
                     }
 
-                    existing_form = supabase.table("candidate_forms")\
-                        .select("id")\
-                        .eq("candidate_id", candidate_id)\
-                        .maybeSingle()\
+                    existing_form = supabase.table("candidate_forms") \
+                        .select("id") \
+                        .eq("candidate_id", candidate_id) \
+                        .maybeSingle() \
                         .execute()
 
                     if existing_form.data:
-                        supabase.table("candidate_forms")\
-                            .update(form_data)\
-                            .eq("candidate_id", candidate_id)\
+                        supabase.table("candidate_forms") \
+                            .update(form_data) \
+                            .eq("candidate_id", candidate_id) \
                             .execute()
                     else:
-                        supabase.table("candidate_forms")\
-                            .insert(form_data)\
+                        supabase.table("candidate_forms") \
+                            .insert(form_data) \
                             .execute()
 
-                    if candidate_result.data['status'] == 'form_sent':
-                        supabase.table("candidates")\
-                            .update({"status": "form_completed", "updated_at": datetime.utcnow().isoformat()})\
-                            .eq("id", candidate_id)\
-                            .execute()
+                    # ---------- 🔥 AUTO SEND AI INTERVIEW (RULE 2) ----------
+                    if candidate_status == "form_sent":
+                        supabase.table("candidates").update({
+                            "status": "form_completed",
+                            "updated_at": datetime.utcnow().isoformat()
+                        }).eq("id", candidate_id).execute()
+
+                        interview_link = f"{config.FRONTEND_URL}?candidate_id={candidate_id}"
+
+                        email_service.send_interview_invitation(
+                            candidate_id,
+                            email,
+                            candidate_name,
+                            interview_link
+                        )
 
                     synced_count += 1
 
@@ -159,5 +180,6 @@ class GoogleSheetsService:
         except Exception as e:
             print(f"Error fetching form response: {e}")
             return None
+
 
 google_sheets_service = GoogleSheetsService()
