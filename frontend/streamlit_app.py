@@ -20,7 +20,7 @@ st.set_page_config(
 )
 
 # =========================
-# HELPERS
+# API HELPERS
 # =========================
 def api_post(endpoint, **kwargs):
     return requests.post(f"{BACKEND_URL}{endpoint}", **kwargs)
@@ -29,7 +29,7 @@ def api_get(endpoint):
     return requests.get(f"{BACKEND_URL}{endpoint}")
 
 # =========================
-# UI NAVIGATION
+# SIDEBAR NAVIGATION
 # =========================
 st.sidebar.title("🧭 Navigation")
 page = st.sidebar.radio(
@@ -41,9 +41,11 @@ page = st.sidebar.radio(
 # PAGE 1 — HR INTAKE
 # =========================
 if page == "📥 HR Intake":
-    st.title("📥 HR Intake – Start Hiring Pipeline")
-
-    st.markdown("Fill job details **once** and upload all resumes together.")
+    st.title("📥 HR Intake — Start Hiring Pipeline")
+    st.markdown(
+        "Fill job details **once** and upload **all resumes together**. "
+        "The system will process each resume automatically."
+    )
 
     with st.form("hr_intake"):
         job_role = st.text_input("Job Role *")
@@ -69,21 +71,43 @@ if page == "📥 HR Intake":
         if not all([job_role, skills, culture, resumes]):
             st.error("Please fill all required fields and upload resumes.")
         else:
-            with st.spinner("Processing resumes and starting AI pipeline..."):
-                files = [("resumes", r) for r in resumes]
-                data = {
-                    "job_role": job_role,
-                    "skills": skills,
-                    "experience": experience,
-                    "culture": culture
-                }
+            with st.spinner("Creating job and uploading resumes..."):
+                # 1️⃣ Create Vacancy
+                vacancy_res = api_post(
+                    "/vacancies",
+                    json={
+                        "job_role": job_role,
+                        "required_skills": [s.strip() for s in skills.split(",")],
+                        "experience_level": experience,
+                        "culture_traits": [c.strip() for c in culture.split(",")],
+                        "description": "",
+                        "created_by": "hr@company.com"
+                    }
+                )
 
-                res = api_post("/process-job", data=data, files=files)
+                if vacancy_res.status_code != 200:
+                    st.error("Failed to create job vacancy")
+                    st.stop()
 
-                if res.status_code == 200:
-                    st.success(f"✅ {len(resumes)} resumes submitted successfully!")
-                else:
-                    st.error("❌ Failed to start pipeline")
+                vacancy_id = vacancy_res.json()["data"]["id"]
+
+                # 2️⃣ Upload resumes
+                success_count = 0
+                for resume in resumes:
+                    res = api_post(
+                        "/candidates",
+                        data={
+                            "vacancy_id": vacancy_id,
+                            "name": "",
+                            "email": "",
+                            "phone": ""
+                        },
+                        files={"resume": resume}
+                    )
+                    if res.status_code == 200:
+                        success_count += 1
+
+                st.success(f"✅ {success_count} resumes uploaded successfully!")
 
 # =========================
 # PAGE 2 — PIPELINE DASHBOARD
@@ -104,29 +128,26 @@ if page == "📊 Hiring Pipeline":
         else:
             df = pd.DataFrame(candidates)
 
-            # Normalize stage display
+            # Normalize stage display (based on backend status)
             stage_map = {
-                "resume": "📄 Resume Screening",
-                "form_sent": "📝 Form Sent",
+                "new": "📄 Resume Uploaded",
+                "screened": "📊 Resume Screened",
+                "form_sent": "📝 Google Form Sent",
                 "form_completed": "✅ Form Completed",
-                "interview": "🎙 AI Interview",
-                "final": "🏁 Final Review"
+                "interviewed": "🎙 AI Interview Done",
+                "recommended": "🏁 Final Interview",
+                "rejected": "❌ Rejected"
             }
-            df["Stage"] = df["stage"].map(stage_map)
 
-            display_df = df[[
-                "name",
-                "email",
-                "job_role",
-                "resume_score",
-                "Stage",
-                "recommendation"
-            ]].rename(columns={
-                "name": "Candidate",
+            df["Stage"] = df["status"].map(stage_map)
+            df["Resume Score"] = df["screening_score"]
+
+            display_df = df[
+                ["name", "email", "vacancy_id", "Resume Score", "Stage"]
+            ].rename(columns={
+                "name": "Candidate Name",
                 "email": "Email",
-                "job_role": "Job Role",
-                "resume_score": "Resume Score",
-                "recommendation": "AI Recommendation"
+                "vacancy_id": "Job ID"
             })
 
             st.dataframe(
