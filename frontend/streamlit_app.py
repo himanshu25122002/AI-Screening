@@ -7,6 +7,9 @@ import pandas as pd
 # =========================
 BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 
+# -------------------------
+# Candidate interview routing
+# -------------------------
 params = st.query_params
 if "candidate_id" in params:
     import interview
@@ -49,14 +52,30 @@ if page == "📥 HR Intake":
 
     with st.form("hr_intake"):
         job_role = st.text_input("Job Role *")
-        skills = st.text_area("Required Skills * (comma-separated)")
+
+        skills = st.text_area(
+            "Required Skills * (comma-separated)",
+            placeholder="Python, FastAPI, SQL, AWS"
+        )
+
         experience = st.selectbox(
             "Experience Level *",
             ["Entry", "Mid", "Senior", "Lead"]
         )
+
         culture = st.text_area(
             "Culture Traits *",
             value="Collaborative, Growth-minded, Innovative"
+        )
+
+        # ✅ NEW: Job Description
+        job_description = st.text_area(
+            "Job Description / Responsibilities *",
+            placeholder=(
+                "Describe responsibilities, tech stack, expectations, KPIs, "
+                "team structure, tools, etc."
+            ),
+            height=150
         )
 
         resumes = st.file_uploader(
@@ -68,7 +87,7 @@ if page == "📥 HR Intake":
         submitted = st.form_submit_button("🚀 Start AI Hiring Pipeline")
 
     if submitted:
-        if not all([job_role, skills, culture, resumes]):
+        if not all([job_role, skills, culture, job_description, resumes]):
             st.error("Please fill all required fields and upload resumes.")
         else:
             with st.spinner("Creating job and uploading resumes..."):
@@ -80,7 +99,7 @@ if page == "📥 HR Intake":
                         "required_skills": [s.strip() for s in skills.split(",")],
                         "experience_level": experience,
                         "culture_traits": [c.strip() for c in culture.split(",")],
-                        "description": "",
+                        "description": job_description,  # ✅ PASSED TO BACKEND
                         "created_by": "hr@company.com"
                     }
                 )
@@ -128,7 +147,6 @@ if page == "📊 Hiring Pipeline":
         else:
             df = pd.DataFrame(candidates)
 
-            # Normalize stage display (based on backend status)
             stage_map = {
                 "new": "📄 Resume Uploaded",
                 "screened": "📊 Resume Screened",
