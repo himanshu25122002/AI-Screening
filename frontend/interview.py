@@ -3,53 +3,48 @@ import requests
 import json
 import time
 
-BACKEND_URL = st.secrets.get("BACKEND_URL", "")
+BACKEND_URL = st.secrets.get("BACKEND_URL")
 
-TOTAL_QUESTIONS = 5
 QUESTION_TIME_SECONDS = 60  # ⏱ 1 minute per question
 
 
 def render(candidate_id: str):
-    st.set_page_config(page_title="AI Interview", page_icon="🎙️", layout="centered")
+    st.set_page_config(
+        page_title="AI Interview",
+        page_icon="🎙️",
+        layout="centered"
+    )
+
     st.title("🎙️ AI Voice Interview")
 
     # -----------------------------
     # Session state initialization
     # -----------------------------
-    if "q_index" not in st.session_state:
-        st.session_state.q_index = 1
-
     if "question" not in st.session_state:
         r = requests.post(
             f"{BACKEND_URL}/ai-interview/next",
             json={"candidate_id": candidate_id}
         )
         r.raise_for_status()
-        st.session_state.question = r.json()["question"]
+
+        data = r.json()
+        if data.get("completed"):
+            st.success("✅ Interview already completed.")
+            st.stop()
+
+        st.session_state.question = data["question"]
+        st.session_state.current = data["current"]
+        st.session_state.total = data["total"]
 
     if "answer" not in st.session_state:
         st.session_state.answer = ""
 
     # -----------------------------
-    # Stop interview if backend says done
-    # -----------------------------
-    try:
-        status_res = requests.get(f"{BACKEND_URL}/candidates/{candidate_id}")
-        status_res.raise_for_status()
-        status = status_res.json()["data"]["candidate"]["status"]
-
-        if status in ["recommended", "rejected"]:
-            st.success("✅ Interview completed. You may safely close this window.")
-            st.stop()
-    except Exception:
-        pass
-
-    # -----------------------------
     # Progress Indicator
     # -----------------------------
-    st.progress(st.session_state.q_index / TOTAL_QUESTIONS)
-    st.markdown(
-        f"### Question {st.session_state.q_index} of {TOTAL_QUESTIONS}"
+    st.progress(st.session_state.current / st.session_state.total)
+    st.caption(
+        f"Question {st.session_state.current} of {st.session_state.total}"
     )
 
     # -----------------------------
@@ -70,7 +65,8 @@ def render(candidate_id: str):
             );
         }}
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SpeechRecognition();
         rec.lang = "en-US";
 
@@ -79,8 +75,8 @@ def render(candidate_id: str):
         }}
 
         rec.onresult = e => {{
-            const text = e.results[0][0].transcript;
-            document.getElementById("ans").value = text;
+            document.getElementById("ans").value =
+                e.results[0][0].transcript;
         }};
 
         function startTimer() {{
@@ -109,42 +105,49 @@ def render(candidate_id: str):
 
         <textarea id="ans" rows="4" cols="70"
             placeholder="Your answer will appear here..."></textarea>
-
         """,
-        height=420,
+        height=420
     )
 
     # -----------------------------
-    # Answer box (Streamlit side)
+    # Answer input (Streamlit side)
     # -----------------------------
     st.session_state.answer = st.text_area(
         "Edit answer if needed",
-        value=st.session_state.answer,
-        key=f"answer_{st.session_state.q_index}"
+        value=st.session_state.answer
     )
 
     # -----------------------------
     # Submit logic (manual + auto)
     # -----------------------------
-    submit = st.button("Submit Answer", key="submit")
+    submit = st.button("Submit Answer")
     auto_submit = st.button("AUTO_SUBMIT", key="autoSubmit")
 
     if submit or auto_submit:
-        # 1️⃣ Send answer for evaluation
-        requests.post(
-            f"{BACKEND_URL}/ai-interview/evaluate",
-            json={
-                "candidate_id": candidate_id,
-                "answer": st.session_state.answer
-            }
-        ).raise_for_status()
-
-        # 2️⃣ End interview after N questions
-        if st.session_state.q_index >= TOTAL_QUESTIONS:
-            st.success("🎉 Interview completed. Thank you!")
+        if not st.session_state.answer.strip():
+            st.warning("Please provide an answer.")
             st.stop()
 
-        # 3️⃣ Get next question
+        # 🔥 Send evaluation ONLY ON FINAL QUESTION
+        if st.session_state.current == st.session_state.total:
+            requests.post(
+                f"{BACKEND_URL}/ai-interview/evaluate",
+                json={
+                    "candidate_id": candidate_id,
+                    "answer": st.session_state.answer
+                }
+            ).raise_for_status()
+
+            st.success("🎉 Interview completed successfully!")
+            st.markdown(
+                """
+                Thank you for completing the interview.  
+                Our team will review your responses and contact you soon.
+                """
+            )
+            st.stop()
+
+        # 🔁 Get next question
         r = requests.post(
             f"{BACKEND_URL}/ai-interview/next",
             json={
@@ -154,9 +157,16 @@ def render(candidate_id: str):
         )
         r.raise_for_status()
 
-        st.session_state.question = r.json()["question"]
-        st.session_state.answer = ""
-        st.session_state.q_index += 1
+        data = r.json()
 
-        time.sleep(0.5)
+        if data.get("completed"):
+            st.success("🎉 Interview completed!")
+            st.stop()
+
+        st.session_state.question = data["question"]
+        st.session_state.current = data["current"]
+        st.session_state.total = data["total"]
+        st.session_state.answer = ""
+
+        time.sleep(0.3)
         st.experimental_rerun()
