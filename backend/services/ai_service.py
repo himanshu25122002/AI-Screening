@@ -83,24 +83,39 @@ class AIService:
         vacancy_data = vacancy.data
 
         prompt = f"""
-You are an expert HR recruiter. Analyze the following resume against the job requirements.
+You are an expert HR recruiter. Analyze the following resume against the job requirements and provide a detailed evaluation.
 
 Job Role: {vacancy_data['job_role']}
-Required Skills: {', '.join(vacancy_data['required_skills'])}
 Experience Level: {vacancy_data['experience_level']}
-Culture Traits: {', '.join(vacancy_data['culture_traits'])}
 
-Resume:
-{candidate_data.get('resume_text', '')}
+Required Skills:
+{', '.join(vacancy_data['required_skills'])}
 
-Respond in JSON:
+Culture Traits:
+{', '.join(vacancy_data['culture_traits'])}
+
+Job Description:
+{vacancy_data.get('description', 'Not provided')}
+
+Candidate Resume:
+{candidate_data.get('resume_text', 'No resume text available')}
+
+Please provide:
+1. A screening score from 0-100
+2. Extracted skills from the resume
+3. Years of experience (estimate if not explicitly stated)
+4. Detailed screening notes explaining the score
+
+Respond in STRICT JSON format:
 {{
   "screening_score": <number>,
-  "extracted_skills": [],
+  "extracted_skills": [<list of skills>],
   "experience_years": <number>,
-  "screening_notes": "<text>"
+  "screening_notes": "<detailed analysis>"
 }}
 """
+
+
 
         messages = [
             {"role": "system", "content": "You are an expert HR recruiter."},
@@ -150,3 +165,4 @@ Respond in JSON:
 
 
 ai_service = AIService()
+
