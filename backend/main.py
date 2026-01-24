@@ -308,7 +308,7 @@ def send_email(request: EmailRequest):
             }).eq("id", request.candidate_id).execute()
 
         elif request.email_type == "interview_invite":
-            interview_link = f"{config.FRONTEND_URL}/interview/{request.candidate_id}"
+            interview_link = f"{config.FRONTEND_URL}?candidate_id={request.candidate_id}"
             result = email_service.send_interview_invitation(
                 request.candidate_id,
                 candidate_data["email"],
@@ -380,5 +380,6 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
