@@ -43,7 +43,6 @@ def next_question(payload: InterviewPayload):
         session = session_res.data
         question_count = session["question_count"]
         transcript = session.get("transcript", [])
-        completed = session.get("completed", False)
     else:
         question_count = 0
         transcript = []
@@ -52,13 +51,15 @@ def next_question(payload: InterviewPayload):
             "candidate_id": payload.candidate_id,
             "question_count": 0,
             "transcript": [],
-            "completed": False,
             "started_at": datetime.utcnow().isoformat()
         }).execute()
 
     # 2️⃣ Stop if interview completed
-    if completed or question_count >= MAX_QUESTIONS:
+    # Stop if interview finished
+    if question_count >= MAX_QUESTIONS:
         return {"completed": True}
+
+
 
     # 3️⃣ Save previous answer safely
     if payload.answer and transcript:
@@ -197,7 +198,6 @@ Return STRICT JSON ONLY:
 
     # 3️⃣ Close session
     supabase.table("ai_interview_sessions").update({
-        "completed": True,
         "transcript": transcript,
         "updated_at": datetime.utcnow().isoformat()
     }).eq("candidate_id", payload.candidate_id).execute()
