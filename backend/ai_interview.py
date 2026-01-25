@@ -149,12 +149,7 @@ Return STRICT JSON ONLY:
 }}
 """
 
-    response = client.responses.create(
-        model=config.AI_MODEL,
-        input=eval_prompt
-    )
-
-    raw = response.output_text.strip()
+    raw = ai_service.generate_completion(eval_prompt)
 
     try:
         evaluation = json.loads(raw)
