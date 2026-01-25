@@ -40,7 +40,7 @@ class AIService:
             response = self.client.chat.completions.create(
                 model=self.model,               # gpt-5-mini
                 messages=messages,
-                max_tokens=max_tokens,
+                max_completion_tokens=max_tokens,
                 temperature=0.3
             )
 
@@ -166,3 +166,4 @@ Return STRICT JSON ONLY:
 
 
 ai_service = AIService()
+
