@@ -108,6 +108,17 @@ class AIService:
 
         candidate_data = candidate.data
         vacancy_data = vacancy.data
+        # =========================
+# 🔍 Extract email from resume text (AGAIN, safely)
+# =========================
+        from services.resume_parser import resume_parser
+
+        resume_text = candidate_data.get("resume_text", "")
+        basic_info = resume_parser.extract_basic_info(resume_text)
+        extracted_email = basic_info.get("email")
+
+
+
 
         prompt = f"""
     Analyze this resume as an expert HR and return STRICT JSON ONLY.
@@ -208,6 +219,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
