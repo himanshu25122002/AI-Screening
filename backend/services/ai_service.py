@@ -6,83 +6,62 @@ from config import config
 from database import supabase
 from services.email_service import email_service
 
-# =========================
-# AI CLIENT IMPORT
-# =========================
-try:
-    from openai import OpenAI
-except ImportError:
-    OpenAI = None
-
+from openai import OpenAI
 
 class AIService:
     def __init__(self):
-        self.provider = config.AI_PROVIDER
-        self.model = config.AI_MODEL
-
-        if self.provider == "openai" and OpenAI:
-            self.client = OpenAI(api_key=config.OPENAI_API_KEY)
-        else:
-            self.client = None
+        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.model = config.AI_MODEL  # gpt-5-mini
 
     # =====================================================
-    # 🔥 RENDER-SAFE GPT-5 / GPT-5-MINI COMPLETION
+    # GPT-5-mini SAFE GENERATION (RENDER-PROOF)
     # =====================================================
     def generate_completion(
         self,
         messages: List[Dict[str, str]],
         max_tokens: int = 1500
     ) -> str:
-        if not self.client:
-            raise RuntimeError("❌ OpenAI client not configured")
-
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,          # gpt-5-mini
-                messages=messages,
-                max_tokens=max_tokens,     # ✅ LEGACY-SAFE FOR RENDER
-                temperature=0.3
+            response = self.client.responses.create(
+                model=self.model,
+                input=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": messages[-1]["content"]
+                            }
+                        ]
+                    }
+                ],
+                max_output_tokens=max_tokens
             )
 
-            content = response.choices[0].message.content
+            output_text = ""
+            for item in response.output:
+                if item["type"] == "message":
+                    for content in item["content"]:
+                        if content["type"] == "output_text":
+                            output_text += content["text"]
 
-        # 🔥 EMPTY OUTPUT GUARD
-            if not content or not content.strip():
-                raise RuntimeError("❌ GPT returned EMPTY response")
+            if not output_text.strip():
+                raise RuntimeError("GPT returned empty output")
 
-            return content.strip()
+            return output_text.strip()
 
         except Exception as e:
-            print("❌ AI COMPLETION FAILED:", str(e))
+            print("❌ AI COMPLETION FAILED:", e)
             raise RuntimeError(f"AI generation failed: {e}")
 
-
-
     # =====================================================
-    # 🧠 RESUME SCREENING
+    # RESUME SCREENING
     # =====================================================
     def screen_resume(self, candidate_id: str, vacancy_id: str) -> Dict[str, Any]:
-        # 🔍 Fetch candidate & vacancy
-        candidate = (
-            supabase.table("candidates")
-            .select("*")
-            .eq("id", candidate_id)
-            .single()
-            .execute()
-        )
-
-        vacancy = (
-            supabase.table("vacancies")
-            .select("*")
-            .eq("id", vacancy_id)
-            .single()
-            .execute()
-        )
-
-        candidate_data = candidate.data
-        vacancy_data = vacancy.data
-
         print("🔥 SCREENING STARTED:", candidate_id)
+
+        candidate = supabase.table("candidates").select("*").eq("id", candidate_id).single().execute()
+        vacancy = supabase.table("vacancies").select("*").eq("id", vacancy_id).single().execute()
 
         prompt = f"""
 You are an expert HR recruiter.
@@ -113,60 +92,34 @@ Return STRICT JSON ONLY:
 }}
 """
 
-        messages = [
-            {"role": "system", "content": "You are an expert HR recruiter."},
-            {"role": "user", "content": prompt}
-        ]
+        response_text = self.generate_completion(
+            [{"role": "user", "content": prompt}]
+        )
 
-        response_text = self.generate_completion(messages)
+        data = json.loads(response_text)
 
-        # =========================
-        # SAFE JSON PARSING
-        # =========================
-        try:
-            response_data = json.loads(response_text)
-        except Exception:
-            start = response_text.find("{")
-            end = response_text.rfind("}") + 1
-            if start == -1 or end == -1:
-                raise RuntimeError("❌ Invalid JSON returned by GPT")
-            response_data = json.loads(response_text[start:end])
-
-        # =========================
-        # UPDATE CANDIDATE
-        # =========================
         supabase.table("candidates").update({
-            "screening_score": response_data["screening_score"],
-            "screening_notes": response_data["screening_notes"],
-            "skills": response_data["extracted_skills"],
-            "experience_years": response_data["experience_years"],
+            "screening_score": data["screening_score"],
+            "skills": data["extracted_skills"],
+            "experience_years": data["experience_years"],
+            "screening_notes": data["screening_notes"],
             "status": "screened",
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", candidate_id).execute()
 
-        # =========================
-        # 🔥 AUTO SEND GOOGLE FORM (SCORE ≥ 90)
-        # =========================
-        if (
-            response_data["screening_score"] >= 90
-            and candidate_data.get("status") != "form_sent"
-        ):
+        if data["screening_score"] >= 90:
             email_service.send_form_invitation(
                 candidate_id,
-                candidate_data["email"],
-                candidate_data["name"]
+                candidate.data["email"],
+                candidate.data["name"]
             )
 
             supabase.table("candidates").update({
-                "status": "form_sent",
-                "updated_at": datetime.utcnow().isoformat()
+                "status": "form_sent"
             }).eq("id", candidate_id).execute()
 
         print("✅ SCREENING COMPLETED:", candidate_id)
-
-        return response_data
+        return data
 
 
 ai_service = AIService()
-
-
