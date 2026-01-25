@@ -80,40 +80,47 @@ def get_vacancy(vacancy_id: str):
 @app.post("/candidates")
 async def create_candidate(
     vacancy_id: str = Form(...),
-    name: str = Form(...),
-    email: str = Form(...),
+    name: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
     phone: Optional[str] = Form(None),
     resume: UploadFile = File(...)
 ):
     try:
         resume_content = await resume.read()
 
-        if resume.filename.endswith('.pdf'):
+        # Parse resume
+        if resume.filename.endswith(".pdf"):
             resume_text = resume_parser.parse_pdf(resume_content)
         else:
             resume_text = resume_parser.parse_text(resume_content)
 
         basic_info = resume_parser.extract_basic_info(resume_text)
 
-        if not name:
-            name = basic_info.get("name", "Unknown")
-        if not email:
-            email = basic_info.get("email", "")
+        # 🔑 Fallback logic (CRITICAL FIX)
+        final_name = name or basic_info.get("name") or "Unknown"
+
+        extracted_email = email or basic_info.get("email")
+
+        # Supabase requires UNIQUE + NOT NULL email
+        if not extracted_email:
+            extracted_email = f"candidate_{uuid4()}@placeholder.local"
+
+        final_phone = phone or basic_info.get("phone")
 
         candidate_data = {
             "vacancy_id": vacancy_id,
-            "name": name,
-            "email": email,
-            "phone": phone or basic_info.get("phone"),
+            "name": final_name,
+            "email": extracted_email,
+            "phone": final_phone,
             "resume_text": resume_text,
-            "resume_url": f"uploads/{email}_{resume.filename}",
+            "resume_url": f"uploads/{resume.filename}",
             "status": "new"
         }
 
         result = supabase.table("candidates").insert(candidate_data).execute()
         candidate = result.data[0]
 
-# 🔥 AUTO START RESUME SCREENING
+        # 🔥 AUTO START RESUME SCREENING
         try:
             ai_service.screen_resume(candidate["id"], vacancy_id)
         except Exception as e:
@@ -121,10 +128,8 @@ async def create_candidate(
 
         return {"success": True, "data": candidate}
 
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/candidates")
 def list_candidates(vacancy_id: Optional[str] = None, status: Optional[str] = None):
     try:
@@ -389,6 +394,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
