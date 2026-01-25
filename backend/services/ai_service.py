@@ -41,8 +41,50 @@ class AIService:
             print("❌ OPENAI ERROR:", e)
             raise
 
+    import re
 
+    def extract_email_from_resume(self, resume_text: str) -> str | None:
+        """
+        Uses AI ONLY if regex-style email is missing.
+        Returns verified email or None.
+        """
 
+        if not resume_text or len(resume_text.strip()) < 30:
+             return None
+
+        prompt = f"""
+    Extract the candidate's EMAIL ADDRESS from the resume text below.
+
+    Rules:
+    - Return ONLY the email address
+    - If email is written like (name at gmail dot com), convert it to real email
+    - If no clear email is present, return NONE
+    - Do NOT guess
+    - Do NOT invent
+
+    Resume:
+    {resume_text}
+    """
+
+        try:
+            response = self.generate_completion(
+                [{"role": "user", "content": prompt}],
+                max_tokens=50
+            ).strip()
+
+            if response.lower() == "none":
+                return None
+
+        # 🔐 Final regex validation (critical)
+            match = re.search(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", response)
+            return match.group(0) if match else None
+
+        except Exception as e:
+            print("❌ AI email extraction failed:", e)
+            return None
+
+ 
+    
     # ================================
     # 🧠 RESUME SCREENING (FIXED)
     # ================================
@@ -141,6 +183,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
