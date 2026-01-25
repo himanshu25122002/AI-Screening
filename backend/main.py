@@ -121,10 +121,9 @@ async def create_candidate(
         candidate = result.data[0]
 
         # 🔥 AUTO START RESUME SCREENING
-        try:
-            ai_service.screen_resume(candidate["id"], vacancy_id)
-        except Exception as e:
-            print(f"Auto screening failed for {candidate['id']}: {e}")
+        ai_service.screen_resume(candidate["id"], vacancy_id)
+
+
 
         return {"success": True, "data": candidate}
 
@@ -437,6 +436,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
