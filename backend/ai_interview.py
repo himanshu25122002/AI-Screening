@@ -32,9 +32,12 @@ def next_question(payload: InterviewPayload):
         supabase.table("ai_interview_sessions")
         .select("*")
         .eq("candidate_id", payload.candidate_id)
-        .maybeSingle()
         .execute()
     )
+
+    session = session_res.data[0] if session_res.data else None
+
+
 
     if session_res.data:
         session = session_res.data
@@ -104,13 +107,19 @@ Adapt difficulty based on previous answers.
 @router.post("/ai-interview/evaluate")
 def evaluate_interview(payload: InterviewPayload):
 
-    session = (
+    session_res = (
         supabase.table("ai_interview_sessions")
         .select("*")
         .eq("candidate_id", payload.candidate_id)
-        .single()
         .execute()
-    ).data
+    )
+
+    if not session_res.data:
+        raise HTTPException(status_code=400, detail="Interview session not found")
+
+    session = session_res.data[0]
+
+
 
     transcript = session["transcript"]
 
