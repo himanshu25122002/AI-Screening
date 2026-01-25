@@ -166,11 +166,7 @@ def render(candidate_id: str):
             }
         )
         r.raise_for_status()
-        data = r.json()
-
-        if data.get("completed"):
-            st.success("✅ Interview completed.")
-            st.stop()
+       
 
         st.session_state.question = data["question"]
         st.session_state.current = data["current"]
