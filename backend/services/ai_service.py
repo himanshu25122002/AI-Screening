@@ -38,15 +38,15 @@ class AIService:
 
         try:
             response = self.client.chat.completions.create(
-                model=self.model,               # gpt-5-mini
+                model=self.model,          # gpt-5-mini
                 messages=messages,
-                max_completion_tokens=max_tokens,
+                max_tokens=max_tokens,     # ✅ LEGACY-SAFE FOR RENDER
                 temperature=0.3
             )
 
             content = response.choices[0].message.content
 
-            # 🔥 EMPTY OUTPUT GUARD (CRITICAL)
+        # 🔥 EMPTY OUTPUT GUARD
             if not content or not content.strip():
                 raise RuntimeError("❌ GPT returned EMPTY response")
 
@@ -55,6 +55,8 @@ class AIService:
         except Exception as e:
             print("❌ AI COMPLETION FAILED:", str(e))
             raise RuntimeError(f"AI generation failed: {e}")
+
+
 
     # =====================================================
     # 🧠 RESUME SCREENING
@@ -166,4 +168,5 @@ Return STRICT JSON ONLY:
 
 
 ai_service = AIService()
+
 
