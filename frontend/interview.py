@@ -3,31 +3,39 @@ import requests
 import json
 import time
 
+# =========================
+# CONFIG
+# =========================
 BACKEND_URL = st.secrets.get("BACKEND_URL")
+QUESTION_TIME_SECONDS = 60  # 1 minute per question
 
-QUESTION_TIME_SECONDS = 60  # ⏱ 1 minute per question
-
-
+# =========================
+# MAIN RENDER FUNCTION
+# =========================
 def render(candidate_id: str):
     st.set_page_config(
         page_title="AI Interview",
-        page_icon="🎙️",
+        page_icon="🎤",
         layout="centered"
     )
 
-    st.title("🎙️ AI Voice Interview")
+    st.title("🎤 AI Interview")
 
-    # -----------------------------
-    # Session state initialization
-    # -----------------------------
+    if not candidate_id:
+        st.error("Invalid interview link.")
+        st.stop()
+
+    # =========================
+    # SESSION STATE INIT
+    # =========================
     if "question" not in st.session_state:
         r = requests.post(
             f"{BACKEND_URL}/ai-interview/next",
             json={"candidate_id": candidate_id}
         )
         r.raise_for_status()
-
         data = r.json()
+
         if data.get("completed"):
             st.success("✅ Interview already completed.")
             st.stop()
@@ -35,21 +43,22 @@ def render(candidate_id: str):
         st.session_state.question = data["question"]
         st.session_state.current = data["current"]
         st.session_state.total = data["total"]
+        st.session_state.answer = ""
 
     if "answer" not in st.session_state:
         st.session_state.answer = ""
 
-    # -----------------------------
-    # Progress Indicator
-    # -----------------------------
+    # =========================
+    # PROGRESS
+    # =========================
     st.progress(st.session_state.current / st.session_state.total)
     st.caption(
         f"Question {st.session_state.current} of {st.session_state.total}"
     )
 
-    # -----------------------------
-    # Question + Voice UI
-    # -----------------------------
+    # =========================
+    # QUESTION + VOICE (TTS)
+    # =========================
     safe_question = json.dumps(st.session_state.question)
 
     st.components.v1.html(
@@ -77,7 +86,7 @@ def render(candidate_id: str):
         rec.onresult = e => {{
             document.getElementById("ans").value =
                 e.results[0][0].transcript;
-        }};
+        }}
 
         function startTimer() {{
             timer = setInterval(() => {{
@@ -101,25 +110,25 @@ def render(candidate_id: str):
         <button onclick="speak()">🔊 Listen</button>
         <button onclick="startRec()">🎙 Speak</button>
 
-        <p id="timer" style="font-weight:bold; color:#d33;"></p>
+        <p id="timer" style="font-weight:bold;color:#d33;"></p>
 
         <textarea id="ans" rows="4" cols="70"
             placeholder="Your answer will appear here..."></textarea>
         """,
-        height=420
+        height=380
     )
 
-    # -----------------------------
-    # Answer input (Streamlit side)
-    # -----------------------------
+    # =========================
+    # ANSWER INPUT (SYNC)
+    # =========================
     st.session_state.answer = st.text_area(
         "Edit answer if needed",
         value=st.session_state.answer
     )
 
-    # -----------------------------
-    # Submit logic (manual + auto)
-    # -----------------------------
+    # =========================
+    # SUBMIT LOGIC
+    # =========================
     submit = st.button("Submit Answer")
     auto_submit = st.button("AUTO_SUBMIT", key="autoSubmit")
 
@@ -128,17 +137,18 @@ def render(candidate_id: str):
             st.warning("Please provide an answer.")
             st.stop()
 
-        # 🔥 Send evaluation ONLY ON FINAL QUESTION
+        # FINAL QUESTION → EVALUATION
         if st.session_state.current == st.session_state.total:
-            requests.post(
+            r = requests.post(
                 f"{BACKEND_URL}/ai-interview/evaluate",
                 json={
                     "candidate_id": candidate_id,
                     "answer": st.session_state.answer
                 }
-            ).raise_for_status()
+            )
+            r.raise_for_status()
 
-            st.success("🎉 Interview completed successfully!")
+            st.success("✅ Interview completed successfully!")
             st.markdown(
                 """
                 Thank you for completing the interview.  
@@ -147,7 +157,7 @@ def render(candidate_id: str):
             )
             st.stop()
 
-        # 🔁 Get next question
+        # NEXT QUESTION
         r = requests.post(
             f"{BACKEND_URL}/ai-interview/next",
             json={
@@ -156,11 +166,10 @@ def render(candidate_id: str):
             }
         )
         r.raise_for_status()
-
         data = r.json()
 
         if data.get("completed"):
-            st.success("🎉 Interview completed!")
+            st.success("✅ Interview completed.")
             st.stop()
 
         st.session_state.question = data["question"]
