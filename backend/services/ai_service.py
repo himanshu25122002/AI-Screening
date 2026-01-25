@@ -144,6 +144,12 @@ class AIService:
             end = response_text.rfind("}") + 1
             data = json.loads(response_text[start:end])
 
+
+
+
+
+
+
     # =========================
     # SAFE TYPE CASTING (CRITICAL)
     # =========================
@@ -163,8 +169,27 @@ class AIService:
             "status": "screened",
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", candidate_id).execute()
+         
 
-    # =========================
+
+        # =========================
+# 🔐 UPDATE EMAIL IF PLACEHOLDER
+# =========================
+        current_email = candidate_data.get("email", "")
+
+        if extracted_email and current_email.endswith("@resume.local"):
+            print("✅ Updating candidate email:", extracted_email)
+
+            supabase.table("candidates").update({
+                "email": extracted_email,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", candidate_id).execute()
+
+    # IMPORTANT: update local copy also
+            candidate_data["email"] = extracted_email
+
+
+    # == =======================
     # AUTO SEND GOOGLE FORM
     # =========================
         if screening_score >= 90:
@@ -183,6 +208,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
