@@ -40,14 +40,14 @@ def next_question(payload: InterviewPayload):
 
 
 
-    if session_res.data:
-        session = session_res.data
+    if session:
         question_count = session["question_count"]
         transcript = session.get("transcript", [])
     else:
         question_count = 0
         transcript = []
-        completed = False
+
+
         supabase.table("ai_interview_sessions").insert({
             "candidate_id": payload.candidate_id,
             "question_count": 0,
