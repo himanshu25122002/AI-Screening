@@ -17,27 +17,31 @@ class AIService:
     # ================================
     # 🔥 SAFE COMPLETION (RENDER SAFE)
     # ================================
-    def generate_completion(self, prompt: str) -> str:
+    def generate_completion(self, prompt: str, max_tokens: int = 1500) -> str:
+        if not self.client:
+            raise RuntimeError("AI client not configured")
+
         try:
+        # GPT-5 / GPT-5-mini compatible
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are an expert HR recruiter."},
                     {"role": "user", "content": prompt}
-                ],
-                
+                ]
             )
 
-            content = response.choices[0].message.content
+            text = response.choices[0].message.content
 
-            if not content or not content.strip():
-                raise RuntimeError("Empty AI response")
+            if not text or not text.strip():
+                raise RuntimeError("Empty response from AI")
 
-            return content.strip()
+            return text.strip()
 
         except Exception as e:
-            print("❌ OPENAI ERROR:", str(e))
+            print("❌ OPENAI ERROR:", e)
             raise
+
+
 
     # ================================
     # 🧠 RESUME SCREENING (FIXED)
@@ -64,7 +68,7 @@ class AIService:
         vacancy_data = vacancy.data
 
         prompt = f"""
-    Analyze this resume and return STRICT JSON ONLY.
+    Analyze this resume as an expert HR and return STRICT JSON ONLY.
 
     Job Role: {vacancy_data['job_role']}
     Experience Level: {vacancy_data['experience_level']}
@@ -85,12 +89,8 @@ class AIService:
     """
 
     # ✅ CORRECT generate_completion CALL
-        response_text = self.generate_completion(
-            messages=[
-                {"role": "system", "content": "You are an expert HR recruiter."},
-                {"role": "user", "content": prompt}
-            ]
-        )
+        response_text = self.generate_completion(prompt)
+           
 
     # =========================
     # SAFE JSON PARSING
@@ -138,14 +138,9 @@ class AIService:
             }).eq("id", candidate_id).execute()
 
         print("✅ SCREENING COMPLETED:", candidate_id)
-        return {
-            "screening_score": screening_score,
-            "extracted_skills": extracted_skills,
-            "experience_years": experience_years,
-            "screening_notes": screening_notes
-        }
-
+        return data
 
 ai_service = AIService()
+
 
 
