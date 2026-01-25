@@ -4,6 +4,9 @@ from config import config
 from database import supabase
 from datetime import datetime
 
+def is_real_email(email: str) -> bool:
+    return email and not email.endswith("@placeholder.local")
+
 
 class EmailService:
     def __init__(self):
@@ -12,6 +15,8 @@ class EmailService:
             config.SENDGRID_FROM_EMAIL,
             config.SENDGRID_FROM_NAME
         )
+    
+
 
     # ======================================================
     # 1️⃣ GOOGLE FORM INVITE
@@ -171,6 +176,11 @@ class EmailService:
 
             response = self.sg.send(message)
 
+
+        if not is_real_email(recipient_email):
+            print(f"⚠️ Skipping email send — invalid email: {recipient_email}")
+
+
             supabase.table("email_logs").insert({
                 "candidate_id": candidate_id,
                 "email_type": email_type,
@@ -197,3 +207,4 @@ class EmailService:
 
 
 email_service = EmailService()
+
