@@ -30,20 +30,50 @@ class AIService:
         else:
             self.client = None
 
-    def generate_completion(self, messages: List[Dict[str, str]], max_tokens: int = 2000) -> str:
+    # =====================================================
+    # ✅ GPT-5 / GPT-5-mini COMPATIBLE GENERATION METHOD
+    # =====================================================
+    def generate_completion(
+        self,
+        messages: List[Dict[str, str]],
+        max_tokens: int = 1500
+    ) -> str:
         if not self.client:
-            return "AI service not configured"
+            raise Exception("AI service not configured")
 
         try:
+            # =========================
+            # OPENAI (GPT-5-mini)
+            # =========================
             if self.provider == "openai":
-                response = self.client.chat.completions.create(
+                response = self.client.responses.create(
                     model=self.model,
-                    messages=messages,
-                    max_tokens=max_tokens,
-                    temperature=0.7
+                    input=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": messages[-1]["content"]
+                                }
+                            ]
+                        }
+                    ],
+                    max_output_tokens=max_tokens
                 )
-                return response.choices[0].message.content
 
+                output_text = ""
+                for item in response.output:
+                    if item["type"] == "message":
+                        for content in item["content"]:
+                            if content["type"] == "output_text":
+                                output_text += content["text"]
+
+                return output_text.strip()
+
+            # =========================
+            # ANTHROPIC (CLAUDE)
+            # =========================
             elif self.provider == "anthropic":
                 system_message = ""
                 user_messages = []
@@ -63,9 +93,12 @@ class AIService:
                 return response.content[0].text
 
         except Exception as e:
-            print(f"AI generation error: {e}")
-            return f"Error: {str(e)}"
+            print("❌ AI generation error:", e)
+            raise
 
+    # =====================================================
+    # RESUME SCREENING
+    # =====================================================
     def screen_resume(self, candidate_id: str, vacancy_id: str) -> Dict[str, Any]:
         candidate = supabase.table("candidates")\
             .select("*")\
@@ -106,16 +139,14 @@ Please provide:
 3. Years of experience (estimate if not explicitly stated)
 4. Detailed screening notes explaining the score
 
-Respond in STRICT JSON format:
+Respond in STRICT JSON format ONLY:
 {{
-  "screening_score": <number>,
-  "extracted_skills": [<list of skills>],
-  "experience_years": <number>,
-  "screening_notes": "<detailed analysis>"
+  "screening_score": 0,
+  "extracted_skills": [],
+  "experience_years": 0,
+  "screening_notes": ""
 }}
 """
-
-
 
         messages = [
             {"role": "system", "content": "You are an expert HR recruiter."},
@@ -124,14 +155,19 @@ Respond in STRICT JSON format:
 
         response_text = self.generate_completion(messages, max_tokens=1500)
 
+        # =========================
+        # SAFE JSON PARSING
+        # =========================
         try:
             response_data = json.loads(response_text)
-        except:
+        except Exception:
             start = response_text.find("{")
             end = response_text.rfind("}") + 1
             response_data = json.loads(response_text[start:end])
 
-        # ✅ Update candidate after screening
+        # =========================
+        # UPDATE CANDIDATE
+        # =========================
         supabase.table("candidates").update({
             "screening_score": response_data["screening_score"],
             "screening_notes": response_data["screening_notes"],
@@ -141,9 +177,11 @@ Respond in STRICT JSON format:
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", candidate_id).execute()
 
-        # 🔥 AUTO SEND GOOGLE FORM (RULE 1)
+        # =========================
+        # AUTO SEND GOOGLE FORM
+        # =========================
         if (
-            response_data["screening_score"] > 90
+            response_data["screening_score"] >= 90
             and candidate_data.get("status") != "form_sent"
         ):
             email_service.send_form_invitation(
@@ -159,10 +197,5 @@ Respond in STRICT JSON format:
 
         return response_data
 
-    # 🔽 REST OF FILE UNCHANGED 🔽
-    # conduct_interview(), _generate_interview_questions(), _evaluate_interview()
-    # remain exactly the same (we will automate them next)
-
 
 ai_service = AIService()
-
