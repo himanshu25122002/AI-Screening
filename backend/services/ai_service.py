@@ -62,7 +62,8 @@ class AIService:
 
         candidate = supabase.table("candidates").select("*").eq("id", candidate_id).single().execute()
         vacancy = supabase.table("vacancies").select("*").eq("id", vacancy_id).single().execute()
-
+        candidate_data = candidate.data
+        vacancy_data = vacancy.data
         prompt = f"""
 You are an expert HR recruiter.
 
@@ -96,7 +97,14 @@ Return STRICT JSON ONLY:
             [{"role": "user", "content": prompt}]
         )
 
-        data = json.loads(response_text)
+        try:
+            data = json.loads(response_text)
+        except Exception:
+            start = response_text.find("{")
+            end = response_text.rfind("}") + 1
+            if start == -1 or end == -1:
+                raise RuntimeError("Invalid JSON returned by AI")
+            data = json.loads(response_text[start:end])
 
         supabase.table("candidates").update({
             "screening_score": data["screening_score"],
@@ -123,3 +131,4 @@ Return STRICT JSON ONLY:
 
 
 ai_service = AIService()
+
