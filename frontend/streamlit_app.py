@@ -114,7 +114,7 @@ if page == "📥 HR Intake":
 
             # 2️⃣ Upload resumes
             success_count = 0
-            failed = []
+            failed_files = []
 
             for resume in resumes:
                 try:
@@ -190,4 +190,5 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
 
