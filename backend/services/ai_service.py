@@ -7,19 +7,12 @@ from database import supabase
 from services.email_service import email_service
 
 # =========================
-# AI CLIENT IMPORTS
+# AI CLIENT IMPORT
 # =========================
 try:
     from openai import OpenAI
-    openai_available = True
 except ImportError:
-    openai_available = False
-
-try:
-    from anthropic import Anthropic
-    anthropic_available = True
-except ImportError:
-    anthropic_available = False
+    OpenAI = None
 
 
 class AIService:
@@ -27,15 +20,13 @@ class AIService:
         self.provider = config.AI_PROVIDER
         self.model = config.AI_MODEL
 
-        if self.provider == "openai" and openai_available:
+        if self.provider == "openai" and OpenAI:
             self.client = OpenAI(api_key=config.OPENAI_API_KEY)
-        elif self.provider == "anthropic" and anthropic_available:
-            self.client = Anthropic(api_key=config.ANTHROPIC_API_KEY)
         else:
             self.client = None
 
     # =====================================================
-    # 🔥 GPT-5 / GPT-5-mini SAFE COMPLETION METHOD
+    # 🔥 RENDER-SAFE GPT-5 / GPT-5-MINI COMPLETION
     # =====================================================
     def generate_completion(
         self,
@@ -43,68 +34,23 @@ class AIService:
         max_tokens: int = 1500
     ) -> str:
         if not self.client:
-            raise RuntimeError("❌ AI client not configured")
+            raise RuntimeError("❌ OpenAI client not configured")
 
         try:
-            # =========================
-            # OPENAI (GPT-5-mini)
-            # =========================
-            if self.provider == "openai":
-                response = self.client.responses.create(
-                    model=self.model,
-                    input=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": messages[-1]["content"]
-                                }
-                            ]
-                        }
-                    ],
-                    max_output_tokens=max_tokens
-                )
+            response = self.client.chat.completions.create(
+                model=self.model,               # gpt-5-mini
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=0.3
+            )
 
-                output_text = ""
-                for item in response.output:
-                    if item.get("type") == "message":
-                        for content in item.get("content", []):
-                            if content.get("type") == "output_text":
-                                output_text += content.get("text", "")
+            content = response.choices[0].message.content
 
-                # 🔥 EMPTY OUTPUT GUARD (CRITICAL FIX)
-                if not output_text or not output_text.strip():
-                    raise RuntimeError("❌ GPT returned EMPTY response")
+            # 🔥 EMPTY OUTPUT GUARD (CRITICAL)
+            if not content or not content.strip():
+                raise RuntimeError("❌ GPT returned EMPTY response")
 
-                return output_text.strip()
-
-            # =========================
-            # ANTHROPIC (CLAUDE)
-            # =========================
-            elif self.provider == "anthropic":
-                system_message = ""
-                user_messages = []
-
-                for msg in messages:
-                    if msg["role"] == "system":
-                        system_message = msg["content"]
-                    else:
-                        user_messages.append(msg)
-
-                response = self.client.messages.create(
-                    model=self.model if "claude" in self.model else "claude-3-sonnet-20240229",
-                    max_tokens=max_tokens,
-                    system=system_message,
-                    messages=user_messages
-                )
-
-                content = response.content[0].text
-
-                if not content or not content.strip():
-                    raise RuntimeError("❌ Claude returned EMPTY response")
-
-                return content.strip()
+            return content.strip()
 
         except Exception as e:
             print("❌ AI COMPLETION FAILED:", str(e))
@@ -137,7 +83,9 @@ class AIService:
         print("🔥 SCREENING STARTED:", candidate_id)
 
         prompt = f"""
-You are an expert HR recruiter. Analyze the following resume against the job requirements.
+You are an expert HR recruiter.
+
+Analyze the candidate resume against the job requirements.
 
 Job Role: {vacancy_data['job_role']}
 Experience Level: {vacancy_data['experience_level']}
@@ -179,11 +127,11 @@ Return STRICT JSON ONLY:
             start = response_text.find("{")
             end = response_text.rfind("}") + 1
             if start == -1 or end == -1:
-                raise RuntimeError("❌ Invalid JSON returned by AI")
+                raise RuntimeError("❌ Invalid JSON returned by GPT")
             response_data = json.loads(response_text[start:end])
 
         # =========================
-        # UPDATE CANDIDATE RECORD
+        # UPDATE CANDIDATE
         # =========================
         supabase.table("candidates").update({
             "screening_score": response_data["screening_score"],
@@ -195,7 +143,7 @@ Return STRICT JSON ONLY:
         }).eq("id", candidate_id).execute()
 
         # =========================
-        # 🔥 AUTO SEND GOOGLE FORM (RULE 1)
+        # 🔥 AUTO SEND GOOGLE FORM (SCORE ≥ 90)
         # =========================
         if (
             response_data["screening_score"] >= 90
