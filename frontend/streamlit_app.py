@@ -7,9 +7,9 @@ import pandas as pd
 # =========================
 BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 
-# -------------------------
+# =========================
 # Candidate interview routing
-# -------------------------
+# =========================
 params = st.query_params
 if "candidate_id" in params:
     import interview
@@ -32,7 +32,7 @@ def api_get(endpoint):
     return requests.get(f"{BACKEND_URL}{endpoint}")
 
 # =========================
-# SIDEBAR NAVIGATION
+# SIDEBAR
 # =========================
 st.sidebar.title("🧭 Navigation")
 page = st.sidebar.radio(
@@ -68,14 +68,14 @@ if page == "📥 HR Intake":
             value="Collaborative, Growth-minded, Innovative"
         )
 
-        # ✅ NEW: Job Description
+        # ✅ NEW — Job Description
         job_description = st.text_area(
             "Job Description / Responsibilities *",
             placeholder=(
-                "Describe responsibilities, tech stack, expectations, KPIs, "
+                "Describe responsibilities, tech stack, expectations, KPIs,\n"
                 "team structure, tools, etc."
             ),
-            height=150
+            height=160
         )
 
         resumes = st.file_uploader(
@@ -88,45 +88,54 @@ if page == "📥 HR Intake":
 
     if submitted:
         if not all([job_role, skills, culture, job_description, resumes]):
-            st.error("Please fill all required fields and upload resumes.")
-        else:
-            with st.spinner("Creating job and uploading resumes..."):
-                # 1️⃣ Create Vacancy
-                vacancy_res = api_post(
-                    "/vacancies",
-                    json={
-                        "job_role": job_role,
-                        "required_skills": [s.strip() for s in skills.split(",")],
-                        "experience_level": experience,
-                        "culture_traits": [c.strip() for c in culture.split(",")],
-                        "description": job_description,  # ✅ PASSED TO BACKEND
-                        "created_by": "hr@company.com"
-                    }
+            st.error("❌ Please fill all required fields and upload resumes.")
+            st.stop()
+
+        with st.spinner("Creating job and uploading resumes..."):
+            # 1️⃣ Create Vacancy
+            vacancy_res = api_post(
+                "/vacancies",
+                json={
+                    "job_role": job_role,
+                    "required_skills": [s.strip() for s in skills.split(",")],
+                    "experience_level": experience,
+                    "culture_traits": [c.strip() for c in culture.split(",")],
+                    "description": job_description,
+                    "created_by": "hr@company.com"
+                }
+            )
+
+            if vacancy_res.status_code != 200:
+                st.error("❌ Failed to create job vacancy")
+                st.text(vacancy_res.text)
+                st.stop()
+
+            vacancy_id = vacancy_res.json()["data"]["id"]
+
+            # 2️⃣ Upload resumes
+            success_count = 0
+            failed = []
+
+            for resume in resumes:
+                res = api_post(
+                    "/candidates",
+                    data={
+                        "vacancy_id": vacancy_id
+                    },
+                    files={"resume": resume}
                 )
 
-                if vacancy_res.status_code != 200:
-                    st.error("Failed to create job vacancy")
-                    st.stop()
+                if res.status_code == 200:
+                    success_count += 1
+                else:
+                    failed.append(resume.name)
 
-                vacancy_id = vacancy_res.json()["data"]["id"]
+            st.success(f"✅ {success_count} resumes uploaded successfully!")
 
-                # 2️⃣ Upload resumes
-                success_count = 0
-                for resume in resumes:
-                    res = api_post(
-                        "/candidates",
-                        data={
-                            "vacancy_id": vacancy_id,
-                            "name": "",
-                            "email": "",
-                            "phone": ""
-                        },
-                        files={"resume": resume}
-                    )
-                    if res.status_code == 200:
-                        success_count += 1
-
-                st.success(f"✅ {success_count} resumes uploaded successfully!")
+            if failed:
+                st.warning("⚠️ Some resumes failed to process:")
+                for f in failed:
+                    st.write(f"• {f}")
 
 # =========================
 # PAGE 2 — PIPELINE DASHBOARD
@@ -139,6 +148,7 @@ if page == "📊 Hiring Pipeline":
 
     if res.status_code != 200:
         st.error("Failed to load candidates")
+        st.text(res.text)
     else:
         candidates = res.json().get("data", [])
 
