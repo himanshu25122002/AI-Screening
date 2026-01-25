@@ -50,7 +50,7 @@ class ResumeParser:
 
         # 🔍 EMAIL — scan FULL resume
         email_match = re.search(
-            r'[\w\.-]+@[\w\.-]+\.\w+',
+            r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$",
             resume_text
         )
         if email_match:
@@ -86,3 +86,4 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
