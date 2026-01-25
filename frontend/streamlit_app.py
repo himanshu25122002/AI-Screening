@@ -117,25 +117,32 @@ if page == "📥 HR Intake":
             failed = []
 
             for resume in resumes:
-                res = api_post(
-                    "/candidates",
-                    data={
-                        "vacancy_id": vacancy_id
-                    },
-                    files={"resume": resume}
-                )
+                try:
+                    res = api_post(
+                        "/candidates",
+                        data={
+                            "vacancy_id": vacancy_id,
+                            "name": "",
+                            "email": "",
+                            "phone": ""
+                        },
+                        files={"resume": resume}
+                    )
 
-                if res.status_code == 200:
-                    success_count += 1
-                else:
-                    failed.append(resume.name)
+                    if res.status_code == 200:
+                        success_count += 1
+                    else:
+                        failed_files.append(resume.name)
+
+                except Exception as e:
+                    failed_files.append(resume.name)
 
             st.success(f"✅ {success_count} resumes uploaded successfully!")
 
-            if failed:
+            if failed_files:
                 st.warning("⚠️ Some resumes failed to process:")
-                for f in failed:
-                    st.write(f"• {f}")
+                for f in failed_files:
+                    st.write(f"- {f}")
 
 # =========================
 # PAGE 2 — PIPELINE DASHBOARD
@@ -183,3 +190,4 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
