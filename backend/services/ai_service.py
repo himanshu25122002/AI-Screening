@@ -25,7 +25,7 @@ class AIService:
                     {"role": "system", "content": "You are an expert HR recruiter."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3
+                
             )
 
             content = response.choices[0].message.content
@@ -113,3 +113,4 @@ Return ONLY this JSON:
 
 
 ai_service = AIService()
+
