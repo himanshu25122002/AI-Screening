@@ -168,10 +168,14 @@ def render(candidate_id: str):
         r.raise_for_status()
        
 
-        st.session_state.question = data["question"]
-        st.session_state.current = data["current"]
-        st.session_state.total = data["total"]
-        st.session_state.answer = ""
+        # ✅ ONLY update state if interview is NOT completed
+        if not data.get("completed"):
+            st.session_state.question = data["question"]
+            st.session_state.current = data["current"]
+            st.session_state.total = data["total"]
+            st.session_state.answer = ""
 
-        time.sleep(0.3)
-        st.experimental_rerun()
+            time.sleep(0.3)
+            st.experimental_rerun()
+
+
