@@ -1,10 +1,14 @@
 import json
 from typing import Dict, List, Any
+from datetime import datetime
+
 from config import config
 from database import supabase
-from datetime import datetime
 from services.email_service import email_service
 
+# =========================
+# AI CLIENT IMPORTS
+# =========================
 try:
     from openai import OpenAI
     openai_available = True
@@ -31,7 +35,7 @@ class AIService:
             self.client = None
 
     # =====================================================
-    # ✅ GPT-5 / GPT-5-mini COMPATIBLE GENERATION METHOD
+    # 🔥 GPT-5 / GPT-5-mini SAFE COMPLETION METHOD
     # =====================================================
     def generate_completion(
         self,
@@ -39,7 +43,7 @@ class AIService:
         max_tokens: int = 1500
     ) -> str:
         if not self.client:
-            raise Exception("AI service not configured")
+            raise RuntimeError("❌ AI client not configured")
 
         try:
             # =========================
@@ -64,10 +68,14 @@ class AIService:
 
                 output_text = ""
                 for item in response.output:
-                    if item["type"] == "message":
-                        for content in item["content"]:
-                            if content["type"] == "output_text":
-                                output_text += content["text"]
+                    if item.get("type") == "message":
+                        for content in item.get("content", []):
+                            if content.get("type") == "output_text":
+                                output_text += content.get("text", "")
+
+                # 🔥 EMPTY OUTPUT GUARD (CRITICAL FIX)
+                if not output_text or not output_text.strip():
+                    raise RuntimeError("❌ GPT returned EMPTY response")
 
                 return output_text.strip()
 
@@ -90,33 +98,46 @@ class AIService:
                     system=system_message,
                     messages=user_messages
                 )
-                return response.content[0].text
+
+                content = response.content[0].text
+
+                if not content or not content.strip():
+                    raise RuntimeError("❌ Claude returned EMPTY response")
+
+                return content.strip()
 
         except Exception as e:
-            print("❌ AI generation error:", e)
-            raise
+            print("❌ AI COMPLETION FAILED:", str(e))
+            raise RuntimeError(f"AI generation failed: {e}")
 
     # =====================================================
-    # RESUME SCREENING
+    # 🧠 RESUME SCREENING
     # =====================================================
     def screen_resume(self, candidate_id: str, vacancy_id: str) -> Dict[str, Any]:
-        candidate = supabase.table("candidates")\
-            .select("*")\
-            .eq("id", candidate_id)\
-            .single()\
+        # 🔍 Fetch candidate & vacancy
+        candidate = (
+            supabase.table("candidates")
+            .select("*")
+            .eq("id", candidate_id)
+            .single()
             .execute()
+        )
 
-        vacancy = supabase.table("vacancies")\
-            .select("*")\
-            .eq("id", vacancy_id)\
-            .single()\
+        vacancy = (
+            supabase.table("vacancies")
+            .select("*")
+            .eq("id", vacancy_id)
+            .single()
             .execute()
+        )
 
         candidate_data = candidate.data
         vacancy_data = vacancy.data
 
+        print("🔥 SCREENING STARTED:", candidate_id)
+
         prompt = f"""
-You are an expert HR recruiter. Analyze the following resume against the job requirements and provide a detailed evaluation.
+You are an expert HR recruiter. Analyze the following resume against the job requirements.
 
 Job Role: {vacancy_data['job_role']}
 Experience Level: {vacancy_data['experience_level']}
@@ -133,13 +154,7 @@ Job Description:
 Candidate Resume:
 {candidate_data.get('resume_text', 'No resume text available')}
 
-Please provide:
-1. A screening score from 0-100
-2. Extracted skills from the resume
-3. Years of experience (estimate if not explicitly stated)
-4. Detailed screening notes explaining the score
-
-Respond in STRICT JSON format ONLY:
+Return STRICT JSON ONLY:
 {{
   "screening_score": 0,
   "extracted_skills": [],
@@ -153,7 +168,7 @@ Respond in STRICT JSON format ONLY:
             {"role": "user", "content": prompt}
         ]
 
-        response_text = self.generate_completion(messages, max_tokens=1500)
+        response_text = self.generate_completion(messages)
 
         # =========================
         # SAFE JSON PARSING
@@ -163,10 +178,12 @@ Respond in STRICT JSON format ONLY:
         except Exception:
             start = response_text.find("{")
             end = response_text.rfind("}") + 1
+            if start == -1 or end == -1:
+                raise RuntimeError("❌ Invalid JSON returned by AI")
             response_data = json.loads(response_text[start:end])
 
         # =========================
-        # UPDATE CANDIDATE
+        # UPDATE CANDIDATE RECORD
         # =========================
         supabase.table("candidates").update({
             "screening_score": response_data["screening_score"],
@@ -178,7 +195,7 @@ Respond in STRICT JSON format ONLY:
         }).eq("id", candidate_id).execute()
 
         # =========================
-        # AUTO SEND GOOGLE FORM
+        # 🔥 AUTO SEND GOOGLE FORM (RULE 1)
         # =========================
         if (
             response_data["screening_score"] >= 90
@@ -194,6 +211,8 @@ Respond in STRICT JSON format ONLY:
                 "status": "form_sent",
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("id", candidate_id).execute()
+
+        print("✅ SCREENING COMPLETED:", candidate_id)
 
         return response_data
 
