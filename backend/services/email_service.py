@@ -166,6 +166,10 @@ class EmailService:
         html_content: str,
         email_type: str
     ):
+
+        if not is_real_email(recipient_email):
+            print(f"⚠️ Skipping email send — invalid email: {recipient_email}")
+
         try:
             message = Mail(
                 from_email=self.from_email,
@@ -175,10 +179,6 @@ class EmailService:
             )
 
             response = self.sg.send(message)
-
-
-        if not is_real_email(recipient_email):
-            print(f"⚠️ Skipping email send — invalid email: {recipient_email}")
 
 
             supabase.table("email_logs").insert({
@@ -207,4 +207,5 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
