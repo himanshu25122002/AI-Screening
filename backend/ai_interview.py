@@ -8,6 +8,7 @@ from openai import OpenAI
 from database import supabase
 from services.email_service import email_service
 from config import config
+from services.ai_service import ai_service
 
 router = APIRouter()
 
@@ -74,12 +75,9 @@ This is question {question_count + 1} of {MAX_QUESTIONS}.
 Adapt difficulty based on previous answers.
 """
 
-    response = client.responses.create(
-        model=config.AI_MODEL,
-        input=prompt
-    )
+    question = ai_service.generate_completion(prompt)
 
-    question = response.output_text.strip()
+
 
     # 5️⃣ Append new question
     transcript.append({
