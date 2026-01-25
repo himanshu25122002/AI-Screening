@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 from datetime import datetime
+from fastapi import BackgroundTasks
+from uuid import uuid4
 
 from models import (
     VacancyCreate, VacancyResponse, CandidateCreate, CandidateResponse,
@@ -79,6 +81,7 @@ def get_vacancy(vacancy_id: str):
 
 @app.post("/candidates")
 async def create_candidate(
+    background_tasks: BackgroundTasks,
     vacancy_id: str = Form(...),
     name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
@@ -88,7 +91,9 @@ async def create_candidate(
     try:
         resume_content = await resume.read()
 
-        # Parse resume
+        # =========================
+        # PARSE RESUME
+        # =========================
         if resume.filename.endswith(".pdf"):
             resume_text = resume_parser.parse_pdf(resume_content)
         else:
@@ -96,14 +101,16 @@ async def create_candidate(
 
         basic_info = resume_parser.extract_basic_info(resume_text)
 
-        # 🔑 Fallback logic (CRITICAL FIX)
+        # =========================
+        # FALLBACK LOGIC (CRITICAL)
+        # =========================
         final_name = name or basic_info.get("name") or "Unknown"
 
         extracted_email = email or basic_info.get("email")
 
         # Supabase requires UNIQUE + NOT NULL email
         if not extracted_email:
-            extracted_email = f"candidate_{uuid4()}@placeholder.local"
+            extracted_email = f"candidate_{uuid4().hex}@placeholder.local"
 
         final_phone = phone or basic_info.get("phone")
 
@@ -117,17 +124,29 @@ async def create_candidate(
             "status": "new"
         }
 
+        # =========================
+        # INSERT CANDIDATE
+        # =========================
         result = supabase.table("candidates").insert(candidate_data).execute()
         candidate = result.data[0]
 
-        # 🔥 AUTO START RESUME SCREENING
-        
-
+        # =========================
+        # 🔥 AUTO START SCREENING (BACKGROUND)
+        # =========================
+        background_tasks.add_task(
+            ai_service.screen_resume,
+            candidate["id"],
+            vacancy_id
+        )
 
         return {"success": True, "data": candidate}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 @app.get("/candidates")
 def list_candidates(vacancy_id: Optional[str] = None, status: Optional[str] = None):
     try:
@@ -435,6 +454,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
