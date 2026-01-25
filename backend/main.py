@@ -175,39 +175,82 @@ def get_candidate(candidate_id: str):
 
 @app.post("/screening/resume")
 def screen_resume(request: ResumeScreeningRequest):
-    try:
-        candidate = supabase.table("candidates")\
-            .select("vacancy_id")\
-            .eq("id", request.candidate_id)\
-            .single()\
-            .execute()
+    # 🔍 Fetch candidate + vacancy
+    candidate_res = (
+        supabase.table("candidates")
+        .select("id, vacancy_id")
+        .eq("id", request.candidate_id)
+        .single()
+        .execute()
+    )
 
-        result = ai_service.screen_resume(request.candidate_id, candidate.data["vacancy_id"])
+    if not candidate_res.data:
+        raise HTTPException(status_code=404, detail="Candidate not found")
 
-        return {"success": True, "data": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    vacancy_id = candidate_res.data["vacancy_id"]
 
+    # 🔥 HARD LOG (IMPORTANT)
+    print("🔥 MANUAL SCREENING STARTED:", request.candidate_id)
+
+    # 🚀 Run AI screening (NO silent try/except)
+    result = ai_service.screen_resume(
+        request.candidate_id,
+        vacancy_id
+    )
+
+    return {
+        "success": True,
+        "data": result
+    }
+
+
+# =========================
+# BATCH RESUME SCREENING
+# =========================
 @app.post("/screening/batch")
 def batch_screen_resumes(vacancy_id: str):
-    try:
-        candidates = supabase.table("candidates")\
-            .select("id")\
-            .eq("vacancy_id", vacancy_id)\
-            .eq("status", "new")\
-            .execute()
+    candidates_res = (
+        supabase.table("candidates")
+        .select("id")
+        .eq("vacancy_id", vacancy_id)
+        .eq("status", "new")
+        .execute()
+    )
 
-        results = []
-        for candidate in candidates.data:
-            try:
-                result = ai_service.screen_resume(candidate["id"], vacancy_id)
-                results.append({"candidate_id": candidate["id"], "success": True, "data": result})
-            except Exception as e:
-                results.append({"candidate_id": candidate["id"], "success": False, "error": str(e)})
+    if not candidates_res.data:
+        return {
+            "success": True,
+            "results": [],
+            "message": "No new candidates to screen"
+        }
 
-        return {"success": True, "results": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    results = []
+
+    for c in candidates_res.data:
+        candidate_id = c["id"]
+        print("🔥 BATCH SCREENING STARTED:", candidate_id)
+
+        try:
+            result = ai_service.screen_resume(candidate_id, vacancy_id)
+            results.append({
+                "candidate_id": candidate_id,
+                "success": True,
+                "data": result
+            })
+        except Exception as e:
+            # ❗ LOG REAL ERROR
+            print("❌ SCREENING FAILED:", candidate_id, str(e))
+
+            results.append({
+                "candidate_id": candidate_id,
+                "success": False,
+                "error": str(e)
+            })
+
+    return {
+        "success": True,
+        "results": results
+    }
 
 @app.post("/interviews/start")
 def start_interview(request: AIInterviewRequest):
@@ -394,6 +437,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
