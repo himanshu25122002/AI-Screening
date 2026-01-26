@@ -30,6 +30,23 @@ def submit_candidate_form(payload: CandidateFormPayload):
             "additional_info": payload.additional_info,
             "form_submitted_at": payload.form_submitted_at or datetime.utcnow().isoformat()
         }).execute()
+        
+        candidate = (
+            supabase.table("candidates")
+            .select("email, name")
+            .eq("id", candidate_id)
+            .single()
+            .execute()
+        ).data
+        
+        interview_link = f"{config.FRONTEND_URL}?candidate_id={request.candidate_id}"
+        email_service.send_ai_interview_link(
+            to_email=candidate["email"],
+            candidate_name=candidate["name"],
+            interview_link=interview_link
+        )
+
+        
 
         # update candidate status
         supabase.table("candidates").update({
