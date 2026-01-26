@@ -194,7 +194,7 @@ class AIService:
         screening_score = int(float(data.get("screening_score", 0)))
         experience_years = int(float(data.get("experience_years", 0)))
         extracted_skills = data.get("extracted_skills", [])
-        screening_notes = str(data.get("screening_notes", "")
+        screening_notes = str(data.get("screening_notes", ""))
     # =========================
     # UPDATE CANDIDATE
     # =========================
@@ -227,6 +227,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
