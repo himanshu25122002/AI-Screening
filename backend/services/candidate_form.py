@@ -68,7 +68,7 @@ def submit_candidate_form(payload: CandidateFormPayload):
             f"?candidate_id={payload.candidate_id}"
         )
 
-        email_service.send_ai_interview_link(
+        email_service.send_interview_invitation(
             to_email=candidate["email"],
             candidate_name=candidate["name"],
             interview_link=interview_link
