@@ -94,12 +94,9 @@ class AIService:
             return None
 
      def extract_email(self, resume_text: str) -> str | None:
-    # 1️⃣ Try regex first
         email = self.extract_email_regex(resume_text)
         if email:
             return email
-
-    # 2️⃣ Fallback to AI
         return self.extract_email_ai(resume_text)
 
 
@@ -127,12 +124,9 @@ class AIService:
 
         candidate_data = candidate.data
         vacancy_data = vacancy.data
-        # =========================
-# 🔍 Extract email from resume text (AGAIN, safely)
-# =========================
-        # =========================
-# 📧 EMAIL EXTRACTION (AI + REGEX)
-# =========================
+        
+
+
         resume_text = candidate_data.get("resume_text", "")
         current_email = candidate_data.get("email", "")
 
@@ -146,7 +140,7 @@ class AIService:
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("id", candidate_id).execute()
 
-    # 🔥 update local copy so next steps use correct email
+   
             candidate_data["email"] = extracted_email
 
 
@@ -233,6 +227,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
