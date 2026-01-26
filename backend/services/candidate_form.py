@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-
+from services.email_service import email_service
 from database import supabase
 
 router = APIRouter()
