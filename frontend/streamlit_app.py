@@ -11,10 +11,18 @@ BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 # Candidate interview routing
 # =========================
 params = st.query_params
-if "candidate_id" in params:
-    import interview
-    interview.render(params["candidate_id"])
+candidate_id = params.get("candidate_id")
+step = params.get("step", "interview")  # default interview
+if candidate_id:
+    if step == "form":
+        import candidate_form
+        candidate_form.render(candidate_id)
+    else:
+        import interview
+        interview.render(candidate_id)
+
     st.stop()
+
 
 st.set_page_config(
     page_title="Futuready AI Hiring System",
@@ -190,5 +198,6 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
 
 
