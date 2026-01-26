@@ -23,19 +23,24 @@ class EmailService:
     # ======================================================
     def send_form_invitation(self, candidate_id: str, candidate_email: str, candidate_name: str):
         subject = "Complete Your Application – Next Steps"
-
+        form_link = f"{config.FRONTEND_URL}?candidate_id={candidate_id}&step=form"
         html_content = f"""
         <html>
         <body>
             <h2>Hello {candidate_name},</h2>
             <p>Thank you for applying at <strong>Futuready</strong>.</p>
 
-            <p>Please complete the form below to proceed:</p>
+            <p>Please complete the short application form to proceed:</p>
 
-            <a href="{config.GOOGLE_FORM_URL}"
+            <a href="{form_link}"
                style="padding:12px 24px;background:#4CAF50;color:#fff;text-decoration:none;border-radius:4px;">
                Complete Application Form
             </a>
+
+            <p style="margin-top:16px;">
+                <b>Note:</b> This link is unique to you. Please do not share it.
+            </p>
+
 
             <p>Best regards,<br>Futuready HR</p>
         </body>
@@ -207,6 +212,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
