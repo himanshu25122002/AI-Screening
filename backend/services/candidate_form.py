@@ -1,60 +1,90 @@
+from typing import Optional, List
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
-from services.email_service import email_service
+
 from database import supabase
+from services.email_service import email_service
+from config import config
 
 router = APIRouter()
 
 
+# ================================
+# Payload Schema
+# ================================
 class CandidateFormPayload(BaseModel):
     candidate_id: str
-    availability: Optional[str]
-    salary_expectations: Optional[str]
+    availability: Optional[str] = None
+    salary_expectations: Optional[str] = None
     portfolio_links: List[str] = []
-    skill_self_assessment: Optional[str]
-    additional_info: Optional[str]
-    form_submitted_at: Optional[str]
+    skill_self_assessment: Optional[str] = None
+    additional_info: Optional[str] = None
+    form_submitted_at: Optional[str] = None
 
 
+# ================================
+# Submit Candidate Form
+# ================================
 @router.post("/candidate-form/submit")
 def submit_candidate_form(payload: CandidateFormPayload):
+    # --------------------------------
+    # 1️⃣ Always save form first (NO FAIL)
+    # --------------------------------
+    supabase.table("candidate_forms").insert({
+        "candidate_id": payload.candidate_id,
+        "availability": payload.availability,
+        "salary_expectations": payload.salary_expectations,
+        "portfolio_links": payload.portfolio_links,
+        "skill_self_assessment": payload.skill_self_assessment,
+        "additional_info": payload.additional_info,
+        "form_submitted_at": payload.form_submitted_at or datetime.utcnow().isoformat()
+    }).execute()
+
+    # --------------------------------
+    # 2️⃣ Update candidate status safely
+    # --------------------------------
+    supabase.table("candidates").update({
+        "status": "form_completed",
+        "updated_at": datetime.utcnow().isoformat()
+    }).eq("id", payload.candidate_id).execute()
+
+    # --------------------------------
+    # 3️⃣ Try sending AI interview email (NON-BLOCKING)
+    # --------------------------------
     try:
-        supabase.table("candidate_forms").insert({
-            "candidate_id": payload.candidate_id,
-            "availability": payload.availability,
-            "salary_expectations": payload.salary_expectations,
-            "portfolio_links": payload.portfolio_links,
-            "skill_self_assessment": payload.skill_self_assessment,
-            "additional_info": payload.additional_info,
-            "form_submitted_at": payload.form_submitted_at or datetime.utcnow().isoformat()
-        }).execute()
-        
         candidate = (
             supabase.table("candidates")
             .select("email, name")
-            .eq("id", candidate_id)
+            .eq("id", payload.candidate_id)
             .single()
             .execute()
-        ).data
-        
-        interview_link = f"{config.FRONTEND_URL}?candidate_id={request.candidate_id}"
+            .data
+        )
+
+        interview_link = (
+            f"{config.FRONTEND_URL}"
+            f"?candidate_id={payload.candidate_id}"
+        )
+
         email_service.send_ai_interview_link(
             to_email=candidate["email"],
             candidate_name=candidate["name"],
             interview_link=interview_link
         )
 
-        
-
-        # update candidate status
+        # update status only if mail sent
         supabase.table("candidates").update({
-            "status": "form_completed",
+            "status": "interview_sent",
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", payload.candidate_id).execute()
 
-        return {"success": True}
-
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # 🔥 DO NOT FAIL FORM SUBMISSION
+        print("⚠️ Interview email failed:", e)
+
+    # --------------------------------
+    # 4️⃣ Always return success
+    # --------------------------------
+    return {"success": True}
