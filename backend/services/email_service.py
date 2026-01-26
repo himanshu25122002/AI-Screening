@@ -53,7 +53,7 @@ class EmailService:
     # ======================================================
     # 2️⃣ AI INTERVIEW INVITE (AUTO LINK)
     # ======================================================
-    def send_interview_invitation(payload.candidate_id, candidate["email"], candidate["name"]):
+    def send_interview_invitation( self, candidate_id: str, candidate_email: str, candidate_name: str):
         subject = "AI Interview Invitation – Futuready"
 
         interview_link = f"{config.FRONTEND_URL}?candidate_id={candidate_id}"
@@ -207,6 +207,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
