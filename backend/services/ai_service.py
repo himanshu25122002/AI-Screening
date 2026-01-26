@@ -93,11 +93,11 @@ class AIService:
             print("❌ AI email extraction failed:", e)
             return None
 
-     def extract_email(self, resume_text: str) -> str | None:
-        email = self.extract_email_regex(resume_text)
-        if email:
-            return email
-        return self.extract_email_ai(resume_text)
+    def extract_email(self, resume_text: str) -> str | None:
+       email = self.extract_email_regex(resume_text)
+       if email:
+           return email
+       return self.extract_email_ai(resume_text)
 
 
     
@@ -227,6 +227,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
