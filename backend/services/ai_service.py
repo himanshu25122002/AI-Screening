@@ -42,8 +42,21 @@ class AIService:
             raise
 
     import re
+   
 
-    def extract_email_from_resume(self, resume_text: str) -> str | None:
+    def extract_email_regex(self, text: str) -> str | None:
+        if not text:
+            return None
+
+        matches = re.findall(
+            r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
+            text
+        )
+
+        return matches[0] if matches else None
+
+
+    def extract_email_ai(self, resume_text: str) -> str | None:
         """
         Uses AI ONLY if regex-style email is missing.
         Returns verified email or None.
@@ -67,10 +80,7 @@ class AIService:
     """
 
         try:
-            response = self.generate_completion(
-                [{"role": "user", "content": prompt}],
-                max_tokens=50
-            ).strip()
+            response = self.generate_completion(prompt).strip()
 
             if response.lower() == "none":
                 return None
@@ -83,7 +93,16 @@ class AIService:
             print("❌ AI email extraction failed:", e)
             return None
 
- 
+     def extract_email(self, resume_text: str) -> str | None:
+    # 1️⃣ Try regex first
+        email = self.extract_email_regex(resume_text)
+        if email:
+            return email
+
+    # 2️⃣ Fallback to AI
+        return self.extract_email_ai(resume_text)
+
+
     
     # ================================
     # 🧠 RESUME SCREENING (FIXED)
@@ -111,11 +130,25 @@ class AIService:
         # =========================
 # 🔍 Extract email from resume text (AGAIN, safely)
 # =========================
-        from services.resume_parser import resume_parser
-
+        # =========================
+# 📧 EMAIL EXTRACTION (AI + REGEX)
+# =========================
         resume_text = candidate_data.get("resume_text", "")
-        basic_info = resume_parser.extract_basic_info(resume_text)
-        extracted_email = basic_info.get("email")
+        current_email = candidate_data.get("email", "")
+
+        extracted_email = self.extract_email(resume_text)
+
+        if extracted_email and current_email.endswith("@resume.local"):
+            print("✅ Updating candidate email:", extracted_email)
+
+            supabase.table("candidates").update({
+                "email": extracted_email,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", candidate_id).execute()
+
+    # 🔥 update local copy so next steps use correct email
+            candidate_data["email"] = extracted_email
+
 
 
 
@@ -167,8 +200,7 @@ class AIService:
         screening_score = int(float(data.get("screening_score", 0)))
         experience_years = int(float(data.get("experience_years", 0)))
         extracted_skills = data.get("extracted_skills", [])
-        screening_notes = str(data.get("screening_notes", ""))
-
+        screening_notes = str(data.get("screening_notes", "")
     # =========================
     # UPDATE CANDIDATE
     # =========================
@@ -180,24 +212,6 @@ class AIService:
             "status": "screened",
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", candidate_id).execute()
-         
-
-
-        # =========================
-# 🔐 UPDATE EMAIL IF PLACEHOLDER
-# =========================
-        current_email = candidate_data.get("email", "")
-
-        if extracted_email and current_email.endswith("@resume.local"):
-            print("✅ Updating candidate email:", extracted_email)
-
-            supabase.table("candidates").update({
-                "email": extracted_email,
-                "updated_at": datetime.utcnow().isoformat()
-            }).eq("id", candidate_id).execute()
-
-    # IMPORTANT: update local copy also
-            candidate_data["email"] = extracted_email
 
 
     # == =======================
@@ -219,6 +233,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
