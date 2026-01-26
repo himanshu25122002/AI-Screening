@@ -1,7 +1,7 @@
 import json
 from typing import Dict, List, Any
 from datetime import datetime
-
+import re
 from config import config
 from database import supabase
 from services.email_service import email_service
@@ -41,7 +41,7 @@ class AIService:
             print("❌ OPENAI ERROR:", e)
             raise
 
-    import re
+    
    
 
     def extract_email_regex(self, text: str) -> str | None:
@@ -227,6 +227,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
