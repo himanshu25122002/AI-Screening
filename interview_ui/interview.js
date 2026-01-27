@@ -50,18 +50,21 @@ function startTimer() {
 }
 
 /* ---------------- TTS (SPEECH OUTPUT) ---------------- */
-function speak(text) {
-  if (!window.speechSynthesis) return;
-
+function speak(text, onDone) {
   speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = 0.95;
-  utter.pitch = 1.1;
-  utter.onstart = () => setState("asking");
-  utter.onend = () => setState("idle");
 
-  speechSynthesis.speak(utter);
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  utterance.onend = () => {
+    if (onDone) onDone();
+  };
+
+  speechSynthesis.speak(utterance);
 }
+
 
 /* ---------------- STT (SPEECH INPUT) ---------------- */
 const SpeechRecognition =
@@ -105,29 +108,32 @@ async function fetchQuestion(answer = null) {
       })
     });
 
-    if (!res.ok) throw new Error("Interview API failed");
-
     const data = await res.json();
 
     
     if (data.completed) {
+      clearInterval(timerInterval);
+      speechSynthesis.cancel();
+
       await fetch(`${API_BASE}/ai-interview/evaluate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          candidate_id: candidateId
-        })
+        body: JSON.stringify({ candidate_id: candidateId })
       });
 
       finishInterview();
       return;
     }
 
+    // ✅ ONLY SHOW QUESTION IF NOT COMPLETED
     showQuestion(data.question);
+
   } catch (err) {
     console.error(err);
     alert("Interview error. Please refresh.");
   }
+}
+
 }
 
 
@@ -135,11 +141,13 @@ async function fetchQuestion(answer = null) {
 function showQuestion(question) {
   questionEl.innerText = question;
   answerBox.value = "";
-
   setState("asking");
-  speak(question);
-  startTimer();
+
+  speak(question, () => {
+    startTimer(); // ✅ START TIMER ONLY AFTER AI FINISHES SPEAKING
+  });
 }
+
 
 /* ---------------- SUBMIT ANSWER ---------------- */
 submitBtn.onclick = submitAnswer;
@@ -161,7 +169,7 @@ function submitAnswer() {
 function finishInterview() {
   setState("completed");
   clearInterval(timerInterval);
-
+  speechSynthesis.cancel();
   questionEl.innerHTML = "🎉 Interview Completed";
   answerBox.style.display = "none";
   micBtn.style.display = "none";
