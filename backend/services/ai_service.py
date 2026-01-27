@@ -211,7 +211,7 @@ class AIService:
     # == =======================
     # AUTO SEND GOOGLE FORM
     # =========================
-        if screening_score >= 90:
+        if screening_score >= 85:
             email_service.send_form_invitation(
                 candidate_id,
                 candidate_data["email"],
@@ -227,6 +227,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
