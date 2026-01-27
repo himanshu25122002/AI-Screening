@@ -216,4 +216,18 @@ Return STRICT JSON ONLY:
             "status": "recommended"
         }).eq("id", payload.candidate_id).execute()
 
+    else:
+   
+        email_service.send_rejection_email(
+            payload.candidate_id,
+            candidate["email"],
+            candidate["name"]
+        )
+
+        supabase.table("candidates").update({
+            "status": "rejected",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", payload.candidate_id).execute()
+
+
     return {"success": True, "evaluation": evaluation}
