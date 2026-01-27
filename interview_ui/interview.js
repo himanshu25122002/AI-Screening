@@ -29,7 +29,7 @@ const submitBtn = document.getElementById("submitBtn");
 const timerEl = document.getElementById("timer");
 
 /* ---------------- TIMER ---------------- */
-const QUESTION_TIME = 60;
+const QUESTION_TIME = 100;
 let timerInterval;
 let timeLeft = QUESTION_TIME;
 
@@ -136,15 +136,40 @@ submitBtn.onclick = submitAnswer;
 
 function submitAnswer() {
   clearInterval(timerInterval);
-  const answer = answerBox.value.trim();
 
+  const answer = answerBox.value.trim();
   if (!answer) {
     alert("Please answer before submitting.");
     return;
   }
 
+  // 🔥 THIS IS THE MISSING LOGIC
+  if (questionCount >= TOTAL_QUESTIONS) {
+    // FINAL ANSWER → EVALUATE
+    fetch(`${API_BASE}/ai-interview/evaluate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        candidate_id: candidateId,
+        answer: answer
+      })
+    })
+      .then(res => res.json())
+      .then(() => {
+        finishInterview(); // UI cleanup
+      })
+      .catch(err => {
+        console.error("Evaluation failed:", err);
+        alert("Interview evaluation failed.");
+      });
+
+    return; // ⛔ STOP HERE
+  }
+
+  // OTHERWISE → NEXT QUESTION
   fetchQuestion(answer);
 }
+
 
 /* ---------------- FINISH ---------------- */
 function finishInterview() {
