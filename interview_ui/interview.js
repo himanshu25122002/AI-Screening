@@ -1,63 +1,46 @@
-// ============================
-// CONFIG
-// ============================
-const API_BASE = "https://hiring-backend-zku9.onrender.com"; // SAME backend
-const MAX_TIME = 60;
+/*************************************************
+ * GOD-LEVEL AI INTERVIEW ENGINE – interview.js
+ * Browser STT + TTS + Camera + AI States
+ * NO BACKEND CHANGES REQUIRED
+ *************************************************/
 
-// ============================
-// STATE
-// ============================
-let candidateId = new URLSearchParams(window.location.search).get("candidate_id");
-let timeLeft = MAX_TIME;
-let timerInterval;
-let recognition;
+const API_BASE = window.location.origin; // same backend
+const params = new URLSearchParams(window.location.search);
+const candidateId = params.get("candidate_id");
 
-// ============================
-// CAMERA
-// ============================
-navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-  .then(stream => {
-    document.getElementById("camera").srcObject = stream;
-  })
-  .catch(() => alert("Camera access denied"));
-
-// ============================
-// SPEECH RECOGNITION (STT)
-// ============================
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
-
-recognition = new SpeechRecognition();
-recognition.lang = "en-US";
-recognition.continuous = false;
-
-recognition.onresult = e => {
-  document.getElementById("answerBox").value =
-    e.results[0][0].transcript;
-};
-
-// ============================
-// TTS
-// ============================
-function speak(text) {
-  speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = 0.95;
-  utter.pitch = 1;
-  speechSynthesis.speak(utter);
+if (!candidateId) {
+  alert("Missing candidate_id");
+  throw new Error("candidate_id missing");
 }
 
-// ============================
-// TIMER
-// ============================
+/* ---------------- AI STATE MACHINE ---------------- */
+let aiState = "idle";
+function setState(state) {
+  aiState = state;
+  document.body.setAttribute("data-state", state);
+  console.log("AI STATE →", state);
+}
+
+/* ---------------- DOM ELEMENTS ---------------- */
+const questionEl = document.getElementById("question");
+const answerBox = document.getElementById("answerBox");
+const micBtn = document.getElementById("micBtn");
+const submitBtn = document.getElementById("submitBtn");
+const timerEl = document.getElementById("timer");
+
+/* ---------------- TIMER ---------------- */
+const QUESTION_TIME = 60;
+let timerInterval;
+let timeLeft = QUESTION_TIME;
+
 function startTimer() {
   clearInterval(timerInterval);
-  timeLeft = MAX_TIME;
-  document.getElementById("timer").innerText = `⏱ ${timeLeft}s`;
+  timeLeft = QUESTION_TIME;
+  timerEl.innerText = `⏱ ${timeLeft}s`;
 
   timerInterval = setInterval(() => {
     timeLeft--;
-    document.getElementById("timer").innerText = `⏱ ${timeLeft}s`;
+    timerEl.innerText = `⏱ ${timeLeft}s`;
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
@@ -66,51 +49,130 @@ function startTimer() {
   }, 1000);
 }
 
-// ============================
-// API CALLS
-// ============================
+/* ---------------- TTS (SPEECH OUTPUT) ---------------- */
+function speak(text) {
+  if (!window.speechSynthesis) return;
+
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.95;
+  utter.pitch = 1.1;
+  utter.onstart = () => setState("asking");
+  utter.onend = () => setState("idle");
+
+  speechSynthesis.speak(utter);
+}
+
+/* ---------------- STT (SPEECH INPUT) ---------------- */
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+  alert("Speech Recognition not supported in this browser.");
+}
+
+const recognition = new SpeechRecognition();
+recognition.lang = "en-US";
+recognition.interimResults = false;
+
+micBtn.onclick = () => {
+  answerBox.value = "";
+  setState("listening");
+  recognition.start();
+};
+
+recognition.onresult = (event) => {
+  const transcript = event.results[0][0].transcript;
+  answerBox.value = transcript;
+};
+
+recognition.onend = () => {
+  setState("idle");
+  answerBox.focus();
+};
+
+/* ---------------- FETCH QUESTION ---------------- */
 async function fetchQuestion(answer = null) {
-  const res = await fetch(`${API_BASE}/ai-interview/next`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      candidate_id: candidateId,
-      answer: answer
-    })
-  });
+  try {
+    setState("thinking");
 
-  const data = await res.json();
+    const res = await fetch(`${API_BASE}/ai-interview/next`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        candidate_id: candidateId,
+        answer: answer
+      })
+    });
 
-  if (data.completed) {
-    document.getElementById("questionText").innerText =
-      "Interview completed. Thank you!";
-    speak("Interview completed. Thank you.");
-    return;
+    if (!res.ok) throw new Error("Interview API failed");
+
+    const data = await res.json();
+
+    if (data.completed) {
+      finishInterview();
+      return;
+    }
+
+    showQuestion(data.question);
+  } catch (err) {
+    console.error(err);
+    alert("Interview error. Please refresh.");
   }
+}
 
-  document.getElementById("questionText").innerText = data.question;
-  document.getElementById("answerBox").value = "";
+/* ---------------- DISPLAY QUESTION ---------------- */
+function showQuestion(question) {
+  questionEl.innerText = question;
+  answerBox.value = "";
 
-  speak(data.question);
+  setState("asking");
+  speak(question);
   startTimer();
 }
 
+/* ---------------- SUBMIT ANSWER ---------------- */
+submitBtn.onclick = submitAnswer;
+
 function submitAnswer() {
-  const ans = document.getElementById("answerBox").value;
-  fetchQuestion(ans);
+  clearInterval(timerInterval);
+  const answer = answerBox.value.trim();
+
+  if (!answer) {
+    alert("Please answer before submitting.");
+    return;
+  }
+
+  fetchQuestion(answer);
 }
 
-// ============================
-// EVENTS
-// ============================
-document.getElementById("listenBtn").onclick = () =>
-  speak(document.getElementById("questionText").innerText);
+/* ---------------- FINISH ---------------- */
+function finishInterview() {
+  setState("completed");
+  clearInterval(timerInterval);
 
-document.getElementById("micBtn").onclick = () => recognition.start();
+  questionEl.innerHTML = "🎉 Interview Completed";
+  answerBox.style.display = "none";
+  micBtn.style.display = "none";
+  submitBtn.style.display = "none";
+  timerEl.innerText = "";
 
-document.getElementById("submitBtn").onclick = submitAnswer;
+  speak("Thank you. Your interview is now complete.");
+}
 
-// ============================
-// START INTERVIEW
-// ============================
-fetchQuestion();
+/* ---------------- CAMERA ---------------- */
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.getElementById("camera");
+    video.srcObject = stream;
+  } catch (e) {
+    console.warn("Camera access denied");
+  }
+}
+
+/* ---------------- INIT ---------------- */
+window.onload = () => {
+  initCamera();
+  fetchQuestion(); // first question
+};
