@@ -203,14 +203,17 @@ Return STRICT JSON ONLY:
 
     # 5️⃣ Auto-Calendly
     if evaluation["overall_score"] >= 75:
-        email_service.send_final_interview_schedule(
-            payload.candidate_id,
-            candidate["email"],
-            candidate["name"],
-            "Final Interview",
-            "Online",
-            config.CALENDLY_LINK
-        )
+        try:
+            email_service.send_final_interview_schedule(
+                payload.candidate_id,
+                candidate["email"],
+                candidate["name"],
+                "Final Interview",
+                "Online",
+                config.CALENDLY_LINK
+            )
+        except Exception as e:
+            print("⚠️ Calendly email failed:", e)
 
         supabase.table("candidates").update({
             "status": "recommended"
@@ -218,11 +221,14 @@ Return STRICT JSON ONLY:
 
     else:
    
-        email_service.send_rejection_email(
-            payload.candidate_id,
-            candidate["email"],
-            candidate["name"]
-        )
+        try:
+            email_service.send_rejection_email(
+                payload.candidate_id,
+                candidate["email"],
+                candidate["name"]
+            )
+        except Exception as e:
+            print("⚠️ Rejection email failed:", e)
 
         supabase.table("candidates").update({
             "status": "rejected",
