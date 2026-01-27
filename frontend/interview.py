@@ -1,217 +1,178 @@
 import streamlit as st
 import requests
-import time
-import json
-from streamlit.components.v1 import html
+import html
 
-# =========================
-# CONFIG
-# =========================
 BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
-MAX_TIMEOUT = 90  # frontend safe timeout
+QUESTION_TIME_SECONDS = 60
 
-# =========================
-# PAGE CONFIG
-# =========================
 st.set_page_config(
     page_title="Futuready AI Interview",
-    page_icon="🎤",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# =========================
-# DARK FUTURISTIC UI
-# =========================
+# ------------------ UI STYLE ------------------
 st.markdown("""
 <style>
-html, body, [data-testid="stApp"] {
-    background: radial-gradient(circle at top, #0f2027, #000000 60%);
-    color: #e0e0e0;
-    font-family: 'Inter', sans-serif;
+body, .stApp {
+    background: radial-gradient(circle at top, #0f2027, #000);
+    color: #e8f1f8 !important;
 }
-h1, h2, h3 {
-    color: #ffffff;
-}
-.glass {
-    background: rgba(255,255,255,0.06);
-    backdrop-filter: blur(14px);
-    border-radius: 18px;
-    padding: 24px;
-    box-shadow: 0 0 60px rgba(0,255,255,0.08);
-}
-.progress-bar {
-    height: 8px;
-    background: linear-gradient(90deg,#00ffd5,#007cf0);
-    border-radius: 8px;
-}
-.timer {
-    font-size: 18px;
-    color: #00ffd5;
+.card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 28px;
+    border: 1px solid rgba(0,255,255,0.25);
+    box-shadow: 0 0 40px rgba(0,255,255,0.08);
 }
 button {
-    border-radius: 10px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}
+textarea {
+    background: #050505 !important;
+    color: #00ffd5 !important;
+    border-radius: 14px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# SESSION INIT
-# =========================
-if "candidate_id" not in st.session_state:
-    params = st.query_params
-    if "candidate_id" not in params:
-        st.error("❌ Invalid interview link.")
-        st.stop()
-    st.session_state.candidate_id = params["candidate_id"]
+# ------------------ PARAM CHECK ------------------
+params = st.query_params
+if "candidate_id" not in params:
+    st.error("Invalid interview link")
+    st.stop()
 
-for key, val in {
-    "question": None,
-    "current": 0,
-    "total": 5,
-    "answer": "",
-    "loading": False
-}.items():
-    st.session_state.setdefault(key, val)
+cid = params["candidate_id"]
 
-# =========================
-# BACKEND CALL (SAFE)
-# =========================
-def fetch_next_question(answer=None):
-    try:
-        r = requests.post(
-            f"{BACKEND_URL}/ai-interview/next",
-            json={
-                "candidate_id": st.session_state.candidate_id,
-                "answer": answer
-            },
-            timeout=MAX_TIMEOUT
-        )
-        r.raise_for_status()
-        return r.json()
+# ------------------ LOAD QUESTION ------------------
+if "question" not in st.session_state:
+    r = requests.post(
+        f"{BACKEND_URL}/ai-interview/next",
+        json={"candidate_id": cid, "answer": None},
+        timeout=60
+    )
+    d = r.json()
+    st.session_state.question = d["question"]
+    st.session_state.current = d["current"]
+    st.session_state.total = d["total"]
 
-    except requests.exceptions.ReadTimeout:
-        st.warning("🧠 AI is thinking deeply… please wait.")
-        time.sleep(2)
-        st.rerun()
+safe_question = html.escape(st.session_state.question)
 
-    except Exception as e:
-        st.error(f"❌ Interview error: {e}")
-        st.stop()
-
-# =========================
-# INITIAL QUESTION
-# =========================
-if st.session_state.question is None:
-    data = fetch_next_question()
-    st.session_state.question = data["question"]
-    st.session_state.current = data.get("current", 1)
-    st.session_state.total = data.get("total", 5)
-
-# =========================
-# HEADER
-# =========================
+# ------------------ HEADER ------------------
 st.markdown(f"""
-<div class="glass">
+<div class="card">
 <h1>🎤 AI Interview</h1>
 <p>Question {st.session_state.current} of {st.session_state.total}</p>
-<div class="progress-bar" style="width:{(st.session_state.current/st.session_state.total)*100}%;"></div>
+<div style="height:8px;border-radius:8px;
+background:linear-gradient(90deg,#00ffd5,#007cf0);
+width:{(st.session_state.current/st.session_state.total)*100}%"></div>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# =========================
-# QUESTION + TTS + TIMER + CAMERA + STT
-# =========================
-html(f"""
-<div class="glass">
+# ------------------ INTERVIEW PANEL ------------------
+st.components.v1.html(
+    f"""
+<div class="card">
+
 <h3>Question</h3>
-<p>{st.session_state.question}</p>
+<p style="font-size:18px;">{safe_question}</p>
 
-<div class="timer" id="timer">Thinking time: 60s</div>
+<video id="cam" autoplay muted playsinline
+style="width:380px;border-radius:16px;
+border:1px solid #00ffd5;margin-bottom:12px"></video>
 
-<video id="camera" autoplay muted playsinline
-       style="width:100%;max-width:420px;border-radius:14px;margin-top:16px;border:1px solid #00ffd5"></video>
+<p id="timer" style="color:#ff7676;font-weight:bold;"></p>
 
-<textarea id="transcript" placeholder="Your spoken answer will appear here..."
-style="width:100%;height:140px;margin-top:16px;
-background:#000;color:#0ff;border-radius:12px;padding:12px;"></textarea>
+<textarea id="ans" rows="5"
+placeholder="Your spoken answer will appear here..."></textarea>
 
-<div style="margin-top:12px;">
-<button onclick="startListening()">🎙 Start Answer</button>
-<button onclick="stopListening()">⏹ Stop</button>
-<button onclick="speakQuestion()">🔊 Repeat Question</button>
-</div>
+<br><br>
+<button onclick="speak()">🔊 Listen</button>
+<button onclick="startRec()">🎙 Start Answer</button>
+<button onclick="stopRec()">⏹ Stop</button>
+
+<button id="autoSubmit" style="display:none"></button>
 
 <script>
-let recognition;
-let timeLeft = 60;
+let timeLeft = {QUESTION_TIME_SECONDS};
+let timer;
+let rec;
 
-// CAMERA
-navigator.mediaDevices.getUserMedia({{video:true,audio:false}})
-.then(stream => {{
-  document.getElementById("camera").srcObject = stream;
-}});
+navigator.mediaDevices.getUserMedia({{video:true}})
+.then(s => cam.srcObject = s)
+.catch(() => console.log("Camera blocked"));
 
-// TIMER
-setInterval(() => {{
-  if(timeLeft > 0) {{
-    timeLeft--;
-    document.getElementById("timer").innerText = "Thinking time: " + timeLeft + "s";
-  }}
-}}, 1000);
-
-// STT
-function startListening() {{
-  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = "en-US";
-  recognition.continuous = true;
-  recognition.onresult = (e) => {{
-    document.getElementById("transcript").value += e.results[e.results.length-1][0].transcript + " ";
-  }};
-  recognition.start();
+function speak() {{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance("{safe_question}");
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
 }}
 
-function stopListening() {{
-  if(recognition) recognition.stop();
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {{
+    rec = new SpeechRecognition();
+    rec.lang = "en-US";
+    rec.continuous = true;
+    rec.interimResults = true;
+
+    rec.onresult = e => {{
+        let text = "";
+        for (let i = 0; i < e.results.length; i++) {{
+            text += e.results[i][0].transcript + " ";
+        }}
+        document.getElementById("ans").value = text;
+    }};
 }}
 
-// TTS
-function speakQuestion() {{
-  let msg = new SpeechSynthesisUtterance("{st.session_state.question}");
-  msg.rate = 0.95;
-  msg.pitch = 1.1;
-  speechSynthesis.speak(msg);
+function startRec() {{
+    if (rec) rec.start();
 }}
+
+function stopRec() {{
+    if (rec) rec.stop();
+}}
+
+function startTimer() {{
+    timer = setInterval(() => {{
+        timeLeft--;
+        document.getElementById("timer").innerText =
+            "⏱ Thinking time left: " + timeLeft + "s";
+        if (timeLeft <= 0) {{
+            clearInterval(timer);
+            document.getElementById("autoSubmit").click();
+        }}
+    }}, 1000);
+}}
+
+window.onload = startTimer;
 </script>
+
 </div>
-""", height=700)
+""",
+    height=720
+)
 
-st.markdown("<br>", unsafe_allow_html=True)
+# ------------------ SUBMIT ------------------
+answer = st.text_area("✍️ Edit answer if needed")
 
-# =========================
-# ANSWER SUBMIT
-# =========================
-answer = st.text_area("✍️ Edit answer if needed", height=120)
+if st.button("🚀 Submit Answer") or st.session_state.get("auto", False):
+    r = requests.post(
+        f"{BACKEND_URL}/ai-interview/next",
+        json={"candidate_id": cid, "answer": answer},
+        timeout=90
+    )
+    d = r.json()
 
-col1, col2 = st.columns([1,1])
-
-with col1:
-    if st.button("🚀 Submit Answer"):
-        st.session_state.loading = True
-        data = fetch_next_question(answer)
-
-        if data.get("completed"):
-            st.success("✅ Interview completed. Thank you!")
-            st.stop()
-
-        st.session_state.question = data["question"]
-        st.session_state.current = data["current"]
-        st.session_state.answer = ""
-        st.rerun()
-
-with col2:
-    if st.button("❌ Exit Interview"):
-        st.warning("Interview exited.")
+    if d.get("completed"):
+        st.success("🎉 Interview completed")
         st.stop()
+
+    st.session_state.question = d["question"]
+    st.session_state.current = d["current"]
+    st.rerun()
