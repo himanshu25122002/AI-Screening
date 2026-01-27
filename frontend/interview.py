@@ -4,271 +4,214 @@ import time
 import json
 from streamlit.components.v1 import html
 
-# =====================================================
+# =========================
 # CONFIG
-# =====================================================
-BACKEND_URL = st.secrets.get("BACKEND_URL", "https://your-backend.onrender.com")
-MAX_QUESTIONS = 5
-THINK_TIME_SECONDS = 60
+# =========================
+BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
+MAX_TIMEOUT = 90  # frontend safe timeout
 
-# =====================================================
+# =========================
 # PAGE CONFIG
-# =====================================================
+# =========================
 st.set_page_config(
-    page_title="Futuready • AI Interview",
-    page_icon="🎧",
+    page_title="Futuready AI Interview",
+    page_icon="🎤",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# =====================================================
-# HIDE STREAMLIT UI
-# =====================================================
+# =========================
+# DARK FUTURISTIC UI
+# =========================
 st.markdown("""
 <style>
-#MainMenu, footer, header {visibility: hidden;}
-html, body, [class*="css"] {
-    background: radial-gradient(circle at top, #020617, #000);
-    color: #e5e7eb;
+html, body, [data-testid="stApp"] {
+    background: radial-gradient(circle at top, #0f2027, #000000 60%);
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
 }
-</style>
-""", unsafe_allow_html=True)
-
-# =====================================================
-# SESSION STATE
-# =====================================================
-for k, v in {
-    "candidate_id": None,
-    "question": None,
-    "q_index": 0,
-    "answer": "",
-    "completed": False,
-    "thinking_start": None,
-    "tts_done": False,
-}.items():
-    st.session_state.setdefault(k, v)
-
-# =====================================================
-# GET CANDIDATE ID
-# =====================================================
-params = st.query_params
-if "candidate_id" not in params:
-    st.error("❌ Invalid interview link")
-    st.stop()
-
-st.session_state.candidate_id = params["candidate_id"]
-
-# =====================================================
-# GLOBAL STYLES (FUTURISTIC)
-# =====================================================
-st.markdown("""
-<style>
+h1, h2, h3 {
+    color: #ffffff;
+}
 .glass {
-    background: rgba(255,255,255,0.08);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    box-shadow: 0 0 60px rgba(56,189,248,0.15);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(14px);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 0 60px rgba(0,255,255,0.08);
 }
-.title {
-    font-size: 3rem;
-    font-weight: 800;
-    text-align: center;
-    background: linear-gradient(90deg,#38bdf8,#22d3ee);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.question {
-    font-size: 1.6rem;
-    font-weight: 600;
+.progress-bar {
+    height: 8px;
+    background: linear-gradient(90deg,#00ffd5,#007cf0);
+    border-radius: 8px;
 }
 .timer {
-    color: #38bdf8;
-    font-size: 1.1rem;
+    font-size: 18px;
+    color: #00ffd5;
 }
-.btn {
-    border: none;
-    padding: 14px 26px;
-    border-radius: 14px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
+button {
+    border-radius: 10px !important;
 }
-.mic { background:#2563eb;color:white; }
-.stop { background:#dc2626;color:white; }
-.submit { background:#22c55e;color:black; }
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
-# CAMERA (LEFT PANEL)
-# =====================================================
-html("""
-<div style="text-align:center">
-<video id="cam" autoplay muted playsinline
- style="width:100%;max-width:420px;border-radius:20px;
- border:2px solid rgba(56,189,248,.5);
- box-shadow:0 0 40px rgba(56,189,248,.25)">
-</video>
-</div>
+# =========================
+# SESSION INIT
+# =========================
+if "candidate_id" not in st.session_state:
+    params = st.query_params
+    if "candidate_id" not in params:
+        st.error("❌ Invalid interview link.")
+        st.stop()
+    st.session_state.candidate_id = params["candidate_id"]
 
-<script>
-navigator.mediaDevices.getUserMedia({video:true})
-.then(s=>document.getElementById("cam").srcObject=s);
-</script>
-""", height=360)
+for key, val in {
+    "question": None,
+    "current": 0,
+    "total": 5,
+    "answer": "",
+    "loading": False
+}.items():
+    st.session_state.setdefault(key, val)
 
-# =====================================================
-# SPEECH ENGINE (TTS + STT)
-# =====================================================
-html("""
-<script>
-let rec;
-function startSTT(){
-  rec=new webkitSpeechRecognition();
-  rec.lang='en-US';
-  rec.continuous=true;
-  rec.onresult=e=>{
-    let t='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      t+=e.results[i][0].transcript+' ';
-    }
-    window.parent.postMessage({type:'stt',text:t},'*');
-  };
-  rec.start();
-}
-function stopSTT(){ if(rec) rec.stop(); }
+# =========================
+# BACKEND CALL (SAFE)
+# =========================
+def fetch_next_question(answer=None):
+    try:
+        r = requests.post(
+            f"{BACKEND_URL}/ai-interview/next",
+            json={
+                "candidate_id": st.session_state.candidate_id,
+                "answer": answer
+            },
+            timeout=MAX_TIMEOUT
+        )
+        r.raise_for_status()
+        return r.json()
 
-function speak(text){
-  let u=new SpeechSynthesisUtterance(text);
-  u.rate=0.95;
-  u.onend=()=>window.parent.postMessage({type:'tts_done'},'*');
-  speechSynthesis.speak(u);
-}
-</script>
-""", height=0)
+    except requests.exceptions.ReadTimeout:
+        st.warning("🧠 AI is thinking deeply… please wait.")
+        time.sleep(2)
+        st.rerun()
 
-# =====================================================
-# BACKEND CALL
-# =====================================================
-def next_question(answer=None):
-    r = requests.post(
-        f"{BACKEND_URL}/ai-interview/next",
-        json={"candidate_id": st.session_state.candidate_id, "answer": answer},
-        timeout=30
-    )
-    r.raise_for_status()
-    return r.json()
+    except Exception as e:
+        st.error(f"❌ Interview error: {e}")
+        st.stop()
 
-# =====================================================
-# LOAD FIRST QUESTION
-# =====================================================
+# =========================
+# INITIAL QUESTION
+# =========================
 if st.session_state.question is None:
-    d = next_question()
-    if d.get("completed"):
-        st.session_state.completed = True
-    else:
-        st.session_state.question = d["question"]
-        st.session_state.q_index = d["current"]
-        st.session_state.tts_done = False
+    data = fetch_next_question()
+    st.session_state.question = data["question"]
+    st.session_state.current = data.get("current", 1)
+    st.session_state.total = data.get("total", 5)
 
-# =====================================================
+# =========================
 # HEADER
-# =====================================================
-st.markdown("<div class='title'>🎧 Futuready AI Interview</div>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#94a3b8'>You will hear each question. You have 1 minute to think.</p>", unsafe_allow_html=True)
-
-if st.session_state.completed:
-    st.success("✅ Interview completed. You may close this tab.")
-    st.stop()
-
-# =====================================================
-# QUESTION CARD
-# =====================================================
+# =========================
 st.markdown(f"""
 <div class="glass">
-<div class="question">
-Question {st.session_state.q_index} of {MAX_QUESTIONS}
-</div><br>
-{st.session_state.question}
+<h1>🎤 AI Interview</h1>
+<p>Question {st.session_state.current} of {st.session_state.total}</p>
+<div class="progress-bar" style="width:{(st.session_state.current/st.session_state.total)*100}%;"></div>
 </div>
 """, unsafe_allow_html=True)
 
-# Speak question ONCE
-if not st.session_state.tts_done:
-    html(f"<script>speak({json.dumps(st.session_state.question)})</script>", height=0)
+st.markdown("<br>", unsafe_allow_html=True)
 
-# =====================================================
-# LISTEN FOR JS EVENTS
-# =====================================================
-html("""
+# =========================
+# QUESTION + TTS + TIMER + CAMERA + STT
+# =========================
+html(f"""
+<div class="glass">
+<h3>Question</h3>
+<p>{st.session_state.question}</p>
+
+<div class="timer" id="timer">Thinking time: 60s</div>
+
+<video id="camera" autoplay muted playsinline
+       style="width:100%;max-width:420px;border-radius:14px;margin-top:16px;border:1px solid #00ffd5"></video>
+
+<textarea id="transcript" placeholder="Your spoken answer will appear here..."
+style="width:100%;height:140px;margin-top:16px;
+background:#000;color:#0ff;border-radius:12px;padding:12px;"></textarea>
+
+<div style="margin-top:12px;">
+<button onclick="startListening()">🎙 Start Answer</button>
+<button onclick="stopListening()">⏹ Stop</button>
+<button onclick="speakQuestion()">🔊 Repeat Question</button>
+</div>
+
 <script>
-window.addEventListener("message",(e)=>{
- if(e.data.type==='stt'){
-   const ta=window.parent.document.getElementById("ans");
-   if(ta) ta.value+=e.data.text;
- }
- if(e.data.type==='tts_done'){
-   window.parent.postMessage({type:'start_timer'},'*');
- }
-});
+let recognition;
+let timeLeft = 60;
+
+// CAMERA
+navigator.mediaDevices.getUserMedia({{video:true,audio:false}})
+.then(stream => {{
+  document.getElementById("camera").srcObject = stream;
+}});
+
+// TIMER
+setInterval(() => {{
+  if(timeLeft > 0) {{
+    timeLeft--;
+    document.getElementById("timer").innerText = "Thinking time: " + timeLeft + "s";
+  }}
+}}, 1000);
+
+// STT
+function startListening() {{
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.continuous = true;
+  recognition.onresult = (e) => {{
+    document.getElementById("transcript").value += e.results[e.results.length-1][0].transcript + " ";
+  }};
+  recognition.start();
+}}
+
+function stopListening() {{
+  if(recognition) recognition.stop();
+}}
+
+// TTS
+function speakQuestion() {{
+  let msg = new SpeechSynthesisUtterance("{st.session_state.question}");
+  msg.rate = 0.95;
+  msg.pitch = 1.1;
+  speechSynthesis.speak(msg);
+}}
 </script>
-""", height=0)
+</div>
+""", height=700)
 
-# =====================================================
-# THINKING TIMER
-# =====================================================
-if st.session_state.thinking_start:
-    elapsed=int(time.time()-st.session_state.thinking_start)
-    remain=max(0,THINK_TIME_SECONDS-elapsed)
-    st.markdown(f"<p class='timer'>🧠 Thinking time: {remain}s</p>", unsafe_allow_html=True)
-    if remain==0:
-        st.warning("⏱️ Thinking time over. Please answer.")
-else:
-    html("""
-    <script>
-    window.addEventListener("message",(e)=>{
-      if(e.data.type==='start_timer'){
-        window.location.search+=''; 
-      }
-    });
-    </script>
-    """, height=0)
-    st.session_state.thinking_start=time.time()
-    st.session_state.tts_done=True
+st.markdown("<br>", unsafe_allow_html=True)
 
-# =====================================================
-# ANSWER INPUT
-# =====================================================
-st.text_area(
-    "Your Answer",
-    key="ans",
-    height=180,
-    placeholder="Your spoken answer will appear here…"
-)
+# =========================
+# ANSWER SUBMIT
+# =========================
+answer = st.text_area("✍️ Edit answer if needed", height=120)
 
-# =====================================================
-# CONTROLS
-# =====================================================
-c1,c2,c3=st.columns(3)
+col1, col2 = st.columns([1,1])
 
-with c1:
-    html("<button class='btn mic' onclick='startSTT()'>🎤 Speak</button>",height=60)
-with c2:
-    html("<button class='btn stop' onclick='stopSTT()'>⏹ Stop</button>",height=60)
-with c3:
-    if st.button("Submit ➜", key="submit"):
-        a=st.session_state.ans.strip()
-        if not a:
-            st.warning("Answer required")
-        else:
-            d=next_question(a)
-            if d.get("completed"):
-                st.session_state.completed=True
-            else:
-                st.session_state.question=d["question"]
-                st.session_state.q_index=d["current"]
-                st.session_state.thinking_start=None
-                st.session_state.tts_done=False
-                st.session_state.ans=""
-            st.rerun()
+with col1:
+    if st.button("🚀 Submit Answer"):
+        st.session_state.loading = True
+        data = fetch_next_question(answer)
+
+        if data.get("completed"):
+            st.success("✅ Interview completed. Thank you!")
+            st.stop()
+
+        st.session_state.question = data["question"]
+        st.session_state.current = data["current"]
+        st.session_state.answer = ""
+        st.rerun()
+
+with col2:
+    if st.button("❌ Exit Interview"):
+        st.warning("Interview exited.")
+        st.stop()
