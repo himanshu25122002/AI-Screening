@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import time
 import json
-from datetime import datetime
 from streamlit.components.v1 import html
 
 # =====================================================
@@ -13,297 +12,263 @@ MAX_QUESTIONS = 5
 THINK_TIME_SECONDS = 60
 
 # =====================================================
-# PAGE SETUP
+# PAGE CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="Futuready AI Interview",
-    page_icon="🎙️",
+    page_title="Futuready • AI Interview",
+    page_icon="🎧",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Hide Streamlit chrome
+# =====================================================
+# HIDE STREAMLIT UI
+# =====================================================
 st.markdown("""
 <style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+#MainMenu, footer, header {visibility: hidden;}
+html, body, [class*="css"] {
+    background: radial-gradient(circle at top, #020617, #000);
+    color: #e5e7eb;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
 # SESSION STATE
 # =====================================================
-if "candidate_id" not in st.session_state:
-    st.session_state.candidate_id = None
-if "current_question" not in st.session_state:
-    st.session_state.current_question = None
-if "question_index" not in st.session_state:
-    st.session_state.question_index = 0
-if "answer" not in st.session_state:
-    st.session_state.answer = ""
-if "completed" not in st.session_state:
-    st.session_state.completed = False
-if "thinking_start" not in st.session_state:
-    st.session_state.thinking_start = None
+for k, v in {
+    "candidate_id": None,
+    "question": None,
+    "q_index": 0,
+    "answer": "",
+    "completed": False,
+    "thinking_start": None,
+    "tts_done": False,
+}.items():
+    st.session_state.setdefault(k, v)
 
 # =====================================================
-# GET candidate_id
+# GET CANDIDATE ID
 # =====================================================
 params = st.query_params
 if "candidate_id" not in params:
-    st.error("Invalid interview link.")
+    st.error("❌ Invalid interview link")
     st.stop()
 
 st.session_state.candidate_id = params["candidate_id"]
 
 # =====================================================
-# STYLES
+# GLOBAL STYLES (FUTURISTIC)
 # =====================================================
 st.markdown("""
 <style>
-body {
-    background: linear-gradient(135deg, #0f172a, #020617);
-    color: white;
+.glass {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 0 60px rgba(56,189,248,0.15);
 }
-
-.interview-card {
-    background: rgba(255,255,255,0.06);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 0 40px rgba(0,0,0,0.4);
+.title {
+    font-size: 3rem;
+    font-weight: 800;
+    text-align: center;
+    background: linear-gradient(90deg,#38bdf8,#22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
-
-.question-text {
+.question {
     font-size: 1.6rem;
     font-weight: 600;
-    margin-bottom: 20px;
 }
-
 .timer {
-    font-size: 1.2rem;
     color: #38bdf8;
+    font-size: 1.1rem;
 }
-
-.mic-btn {
-    background: #2563eb;
-    color: white;
-    border-radius: 50%;
-    width: 90px;
-    height: 90px;
-    font-size: 2rem;
+.btn {
     border: none;
-}
-
-.stop-btn {
-    background: #dc2626;
-    color: white;
-    border-radius: 12px;
-    padding: 10px 20px;
+    padding: 14px 26px;
+    border-radius: 14px;
     font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
 }
+.mic { background:#2563eb;color:white; }
+.stop { background:#dc2626;color:white; }
+.submit { background:#22c55e;color:black; }
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# CAMERA COMPONENT
+# CAMERA (LEFT PANEL)
 # =====================================================
 html("""
-<div style="text-align:center;">
-<video id="video" autoplay muted playsinline
- style="width:100%;max-width:420px;border-radius:16px;border:2px solid #38bdf8;"></video>
+<div style="text-align:center">
+<video id="cam" autoplay muted playsinline
+ style="width:100%;max-width:420px;border-radius:20px;
+ border:2px solid rgba(56,189,248,.5);
+ box-shadow:0 0 40px rgba(56,189,248,.25)">
+</video>
 </div>
 
 <script>
-navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => {
-  document.getElementById("video").srcObject = stream;
-})
-.catch(err => console.error(err));
+navigator.mediaDevices.getUserMedia({video:true})
+.then(s=>document.getElementById("cam").srcObject=s);
 </script>
-""", height=300)
+""", height=360)
 
 # =====================================================
-# TTS + STT COMPONENT
+# SPEECH ENGINE (TTS + STT)
 # =====================================================
-def speech_component():
-    return html("""
+html("""
 <script>
-let recognition;
-let isListening = false;
-
-function startListening() {
-    if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech Recognition not supported");
-        return;
+let rec;
+function startSTT(){
+  rec=new webkitSpeechRecognition();
+  rec.lang='en-US';
+  rec.continuous=true;
+  rec.onresult=e=>{
+    let t='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      t+=e.results[i][0].transcript+' ';
     }
-
-    recognition = new webkitSpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = true;
-    recognition.interimResults = false;
-
-    recognition.onresult = function(event) {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-        }
-        window.parent.postMessage({ type: "answer", text: transcript }, "*");
-    };
-
-    recognition.start();
-    isListening = true;
+    window.parent.postMessage({type:'stt',text:t},'*');
+  };
+  rec.start();
 }
+function stopSTT(){ if(rec) rec.stop(); }
 
-function stopListening() {
-    if (recognition) {
-        recognition.stop();
-        isListening = false;
-    }
-}
-
-function speak(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    speechSynthesis.speak(utterance);
+function speak(text){
+  let u=new SpeechSynthesisUtterance(text);
+  u.rate=0.95;
+  u.onend=()=>window.parent.postMessage({type:'tts_done'},'*');
+  speechSynthesis.speak(u);
 }
 </script>
 """, height=0)
 
-speech_component()
-
 # =====================================================
-# FETCH NEXT QUESTION
+# BACKEND CALL
 # =====================================================
-def fetch_next_question(answer=None):
-    payload = {
-        "candidate_id": st.session_state.candidate_id,
-        "answer": answer
-    }
-    r = requests.post(f"{BACKEND_URL}/ai-interview/next", json=payload)
+def next_question(answer=None):
+    r = requests.post(
+        f"{BACKEND_URL}/ai-interview/next",
+        json={"candidate_id": st.session_state.candidate_id, "answer": answer},
+        timeout=30
+    )
     r.raise_for_status()
     return r.json()
 
 # =====================================================
-# INITIAL QUESTION
+# LOAD FIRST QUESTION
 # =====================================================
-if st.session_state.current_question is None:
-    data = fetch_next_question()
-    if data.get("completed"):
+if st.session_state.question is None:
+    d = next_question()
+    if d.get("completed"):
         st.session_state.completed = True
     else:
-        st.session_state.current_question = data["question"]
-        st.session_state.question_index = data["current"]
-        st.session_state.thinking_start = time.time()
+        st.session_state.question = d["question"]
+        st.session_state.q_index = d["current"]
+        st.session_state.tts_done = False
 
 # =====================================================
-# MAIN UI
+# HEADER
 # =====================================================
-st.markdown("<h1 style='text-align:center;'>🎙️ Futuready AI Interview</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#94a3b8;'>Answer honestly. Take your time.</p>", unsafe_allow_html=True)
+st.markdown("<div class='title'>🎧 Futuready AI Interview</div>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#94a3b8'>You will hear each question. You have 1 minute to think.</p>", unsafe_allow_html=True)
 
 if st.session_state.completed:
-    st.success("✅ Interview completed. Thank you for your time!")
-    st.markdown("""
-    <div class="interview-card">
-        <h3>What happens next?</h3>
-        <ul>
-            <li>Your interview is being evaluated</li>
-            <li>Our team will reach out if shortlisted</li>
-            <li>No further action needed from you</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.success("✅ Interview completed. You may close this tab.")
     st.stop()
 
 # =====================================================
 # QUESTION CARD
 # =====================================================
-with st.container():
-    st.markdown(f"""
-    <div class="interview-card">
-        <div class="question-text">
-            Question {st.session_state.question_index} of {MAX_QUESTIONS}
-        </div>
-        <div class="question-text">
-            {st.session_state.current_question}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"""
+<div class="glass">
+<div class="question">
+Question {st.session_state.q_index} of {MAX_QUESTIONS}
+</div><br>
+{st.session_state.question}
+</div>
+""", unsafe_allow_html=True)
 
-    # Speak question
-    html(f"""
-    <script>
-    speak({json.dumps(st.session_state.current_question)});
-    </script>
-    """, height=0)
+# Speak question ONCE
+if not st.session_state.tts_done:
+    html(f"<script>speak({json.dumps(st.session_state.question)})</script>", height=0)
 
 # =====================================================
-# THINKING TIMER
+# LISTEN FOR JS EVENTS
 # =====================================================
-elapsed = int(time.time() - st.session_state.thinking_start)
-remaining = max(0, THINK_TIME_SECONDS - elapsed)
-
-st.markdown(f"<p class='timer'>🧠 Thinking time: {remaining}s</p>", unsafe_allow_html=True)
-
-if remaining > 0:
-    time.sleep(1)
-    st.rerun()
-
-# =====================================================
-# MIC CONTROLS
-# =====================================================
-st.markdown("### 🎤 Record your answer")
-
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    html("""
-    <button class="mic-btn" onclick="startListening()">🎤</button>
-    """, height=100)
-
-with col2:
-    html("""
-    <button class="stop-btn" onclick="stopListening()">Stop</button>
-    """, height=60)
-
-# Receive answer
-answer_box = st.empty()
-
 html("""
 <script>
-window.addEventListener("message", (event) => {
-    if (event.data.type === "answer") {
-        const input = window.parent.document.getElementById("answer_input");
-        if (input) {
-            input.value += " " + event.data.text;
-        }
-    }
+window.addEventListener("message",(e)=>{
+ if(e.data.type==='stt'){
+   const ta=window.parent.document.getElementById("ans");
+   if(ta) ta.value+=e.data.text;
+ }
+ if(e.data.type==='tts_done'){
+   window.parent.postMessage({type:'start_timer'},'*');
+ }
 });
 </script>
 """, height=0)
 
+# =====================================================
+# THINKING TIMER
+# =====================================================
+if st.session_state.thinking_start:
+    elapsed=int(time.time()-st.session_state.thinking_start)
+    remain=max(0,THINK_TIME_SECONDS-elapsed)
+    st.markdown(f"<p class='timer'>🧠 Thinking time: {remain}s</p>", unsafe_allow_html=True)
+    if remain==0:
+        st.warning("⏱️ Thinking time over. Please answer.")
+else:
+    html("""
+    <script>
+    window.addEventListener("message",(e)=>{
+      if(e.data.type==='start_timer'){
+        window.location.search+=''; 
+      }
+    });
+    </script>
+    """, height=0)
+    st.session_state.thinking_start=time.time()
+    st.session_state.tts_done=True
+
+# =====================================================
+# ANSWER INPUT
+# =====================================================
 st.text_area(
     "Your Answer",
-    key="answer_input",
-    height=150,
-    placeholder="Your spoken answer will appear here..."
+    key="ans",
+    height=180,
+    placeholder="Your spoken answer will appear here…"
 )
 
 # =====================================================
-# SUBMIT ANSWER
+# CONTROLS
 # =====================================================
-if st.button("Submit Answer ➜"):
-    answer = st.session_state.get("answer_input", "").strip()
-    if not answer:
-        st.warning("Please provide an answer.")
-    else:
-        data = fetch_next_question(answer)
-        if data.get("completed"):
-            st.session_state.completed = True
+c1,c2,c3=st.columns(3)
+
+with c1:
+    html("<button class='btn mic' onclick='startSTT()'>🎤 Speak</button>",height=60)
+with c2:
+    html("<button class='btn stop' onclick='stopSTT()'>⏹ Stop</button>",height=60)
+with c3:
+    if st.button("Submit ➜", key="submit"):
+        a=st.session_state.ans.strip()
+        if not a:
+            st.warning("Answer required")
         else:
-            st.session_state.current_question = data["question"]
-            st.session_state.question_index = data["current"]
-            st.session_state.thinking_start = time.time()
-            st.session_state.answer_input = ""
-        st.rerun()
+            d=next_question(a)
+            if d.get("completed"):
+                st.session_state.completed=True
+            else:
+                st.session_state.question=d["question"]
+                st.session_state.q_index=d["current"]
+                st.session_state.thinking_start=None
+                st.session_state.tts_done=False
+                st.session_state.ans=""
+            st.rerun()
