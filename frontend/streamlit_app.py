@@ -14,16 +14,13 @@ params = st.query_params
 candidate_id = params.get("candidate_id")
 
 if candidate_id:
-    # 🔍 Check if form already submitted
     try:
         r = requests.get(
             f"{BACKEND_URL}/candidate-form/status",
             params={"candidate_id": candidate_id},
             timeout=10
         )
-
         form_completed = r.json().get("form_completed", False)
-
     except Exception:
         form_completed = False
 
@@ -31,10 +28,35 @@ if candidate_id:
         import candidate_form
         candidate_form.render(candidate_id)
     else:
-        import interview
-        interview.render(candidate_id)
+        st.success("✅ Form already submitted")
+
+        interview_url = (
+            "https://ai-screening-six.vercel.app/index.html"
+            f"?candidate_id={candidate_id}"
+        )
+
+        st.markdown("### 🎤 AI Interview")
+        st.markdown(
+            f"""
+            <a href="{interview_url}" target="_blank">
+                <button style="
+                    padding:14px 28px;
+                    font-size:16px;
+                    background:#4CAF50;
+                    color:white;
+                    border:none;
+                    border-radius:8px;
+                    cursor:pointer;
+                ">
+                Start AI Interview
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
 
     st.stop()
+
 
 
 
@@ -212,6 +234,7 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
 
 
 
