@@ -85,3 +85,30 @@ def submit_candidate_form(payload: CandidateFormPayload):
     # 4️⃣ Always return success
     # --------------------------------
     return {"success": True}
+
+# ================================
+# Check Candidate Form Status
+# ================================
+@router.get("/candidate-form/status")
+def candidate_form_status(candidate_id: str):
+    candidate = (
+        supabase.table("candidates")
+        .select("status")
+        .eq("id", candidate_id)
+        .single()
+        .execute()
+        .data
+    )
+
+    if not candidate:
+        return {"form_completed": False}
+
+    return {
+        "form_completed": candidate["status"] in [
+            "form_completed",
+            "interview_sent",
+            "interview_started",
+            "interview_completed"
+        ]
+    }
+
