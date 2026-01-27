@@ -29,7 +29,7 @@ const submitBtn = document.getElementById("submitBtn");
 const timerEl = document.getElementById("timer");
 
 /* ---------------- TIMER ---------------- */
-const QUESTION_TIME = 100;
+const QUESTION_TIME = 10;
 let timerInterval;
 let timeLeft = QUESTION_TIME;
 
