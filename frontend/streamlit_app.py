@@ -12,17 +12,30 @@ BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 # =========================
 params = st.query_params
 candidate_id = params.get("candidate_id")
-step = params.get("step", "interview")  # default interview
+
 if candidate_id:
-    if step == "form":
+    # 🔍 Check if form already submitted
+    try:
+        r = requests.get(
+            f"{BACKEND_URL}/candidate-form/status",
+            params={"candidate_id": candidate_id},
+            timeout=10
+        )
+
+        form_completed = r.json().get("form_completed", False)
+
+    except Exception:
+        form_completed = False
+
+    if not form_completed:
         import candidate_form
         candidate_form.render(candidate_id)
     else:
         import interview
-        interview.render(params["candidate_id"])
-
+        interview.render(candidate_id)
 
     st.stop()
+
 
 
 st.set_page_config(
@@ -199,6 +212,7 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
 
 
 
