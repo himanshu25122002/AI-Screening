@@ -7,6 +7,7 @@
 const API_BASE = "https://hiring-backend-zku9.onrender.com"; // same backend
 const params = new URLSearchParams(window.location.search);
 const candidateId = params.get("candidate_id");
+let interviewCompleted = false;
 
 if (!candidateId) {
   alert("Missing candidate_id");
@@ -39,15 +40,21 @@ function startTimer() {
   timerEl.innerText = `⏱ ${timeLeft}s`;
 
   timerInterval = setInterval(() => {
+    if (interviewCompleted) {
+      clearInterval(timerInterval);
+      return;
+    }
+
     timeLeft--;
     timerEl.innerText = `⏱ ${timeLeft}s`;
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      submitAnswer();
+      submitAnswer(); 
     }
   }, 1000);
 }
+
 
 /* ---------------- TTS (SPEECH OUTPUT) ---------------- */
 function speak(text, onDone) {
@@ -96,6 +103,8 @@ recognition.onend = () => {
 
 /* ---------------- FETCH QUESTION ---------------- */
 async function fetchQuestion(answer = null) {
+  if (interviewCompleted) return;
+
   try {
     setState("thinking");
 
@@ -110,8 +119,9 @@ async function fetchQuestion(answer = null) {
 
     const data = await res.json();
 
-    
+    // ✅ HARD STOP IF COMPLETED
     if (data.completed) {
+      interviewCompleted = true;
       clearInterval(timerInterval);
       speechSynthesis.cancel();
 
@@ -125,7 +135,6 @@ async function fetchQuestion(answer = null) {
       return;
     }
 
-    // ✅ ONLY SHOW QUESTION IF NOT COMPLETED
     showQuestion(data.question);
 
   } catch (err) {
@@ -134,25 +143,31 @@ async function fetchQuestion(answer = null) {
   }
 }
 
-}
 
 
 /* ---------------- DISPLAY QUESTION ---------------- */
 function showQuestion(question) {
+  if (interviewCompleted) return;
+
   questionEl.innerText = question;
   answerBox.value = "";
   setState("asking");
 
   speak(question, () => {
-    startTimer(); // ✅ START TIMER ONLY AFTER AI FINISHES SPEAKING
+    if (!interviewCompleted) {
+      startTimer(); 
+    }
   });
 }
+
 
 
 /* ---------------- SUBMIT ANSWER ---------------- */
 submitBtn.onclick = submitAnswer;
 
 function submitAnswer() {
+  if (interviewCompleted) return;
+
   clearInterval(timerInterval);
 
   const answer = answerBox.value.trim();
@@ -161,15 +176,19 @@ function submitAnswer() {
     return;
   }
 
-  fetchQuestion(answer); // 🔥 ALWAYS GO THROUGH BACKEND
+  fetchQuestion(answer);
 }
+
 
 
 /* ---------------- FINISH ---------------- */
 function finishInterview() {
+  interviewCompleted = true;
+
   setState("completed");
   clearInterval(timerInterval);
   speechSynthesis.cancel();
+
   questionEl.innerHTML = "🎉 Interview Completed";
   answerBox.style.display = "none";
   micBtn.style.display = "none";
