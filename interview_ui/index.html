@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Futuready AI Interview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="bg-glow"></div>
+
+  <div class="app">
+    <header>
+      <h1>Futuready AI Interview</h1>
+      <span class="badge">LIVE</span>
+    </header>
+
+    <main>
+      <!-- CAMERA -->
+      <section class="camera-box">
+        <video id="camera" autoplay muted playsinline></video>
+        <div class="cam-label">Camera Active</div>
+      </section>
+
+      <!-- QUESTION -->
+      <section class="question-box">
+        <h2>Question</h2>
+        <p id="questionText">Loading your interview...</p>
+      </section>
+
+      <!-- TIMER -->
+      <div class="timer" id="timer">⏱ 60s</div>
+
+      <!-- CONTROLS -->
+      <div class="controls">
+        <button id="listenBtn">🔊 Listen</button>
+        <button id="micBtn">🎙 Speak</button>
+        <button id="submitBtn">➡️ Submit</button>
+      </div>
+
+      <!-- ANSWER -->
+      <textarea
+        id="answerBox"
+        placeholder="Your spoken answer will appear here..."
+      ></textarea>
+    </main>
+
+    <footer>
+      <p>Powered by Futuready AI • Do not refresh</p>
+    </footer>
+  </div>
+
+  <script src="interview.js"></script>
+</body>
+</html>
