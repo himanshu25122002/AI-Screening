@@ -19,7 +19,7 @@ if candidate_id:
         candidate_form.render(candidate_id)
     else:
         import interview
-        interview.render(candidate_id)
+
 
     st.stop()
 
@@ -198,6 +198,7 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
 
 
 
