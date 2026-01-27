@@ -109,7 +109,16 @@ async function fetchQuestion(answer = null) {
 
     const data = await res.json();
 
+    
     if (data.completed) {
+      await fetch(`${API_BASE}/ai-interview/evaluate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidate_id: candidateId
+        })
+      });
+
       finishInterview();
       return;
     }
@@ -120,6 +129,7 @@ async function fetchQuestion(answer = null) {
     alert("Interview error. Please refresh.");
   }
 }
+
 
 /* ---------------- DISPLAY QUESTION ---------------- */
 function showQuestion(question) {
@@ -143,31 +153,7 @@ function submitAnswer() {
     return;
   }
 
-  // 🔥 THIS IS THE MISSING LOGIC
-  if (questionCount >= TOTAL_QUESTIONS) {
-    // FINAL ANSWER → EVALUATE
-    fetch(`${API_BASE}/ai-interview/evaluate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        candidate_id: candidateId,
-        answer: answer
-      })
-    })
-      .then(res => res.json())
-      .then(() => {
-        finishInterview(); // UI cleanup
-      })
-      .catch(err => {
-        console.error("Evaluation failed:", err);
-        alert("Interview evaluation failed.");
-      });
-
-    return; // ⛔ STOP HERE
-  }
-
-  // OTHERWISE → NEXT QUESTION
-  fetchQuestion(answer);
+  fetchQuestion(answer); // 🔥 ALWAYS GO THROUGH BACKEND
 }
 
 
