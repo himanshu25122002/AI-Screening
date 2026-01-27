@@ -61,7 +61,10 @@ class EmailService:
     def send_interview_invitation( self, candidate_id: str, candidate_email: str, candidate_name: str):
         subject = "AI Interview Invitation – Futuready"
 
-        interview_link = f"{config.FRONTEND_URL}?candidate_id={candidate_id}"
+        interview_link = (
+            f"https://ai-screening-six.vercel.app/index.html"
+            f"?candidate_id={candidate_id}"
+        )
 
         html_content = f"""
         <html>
@@ -212,6 +215,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
