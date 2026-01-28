@@ -148,66 +148,66 @@ class AIService:
 
 
        prompt = f"""
-    You are a senior ATS (Applicant Tracking System) evaluator used by large tech companies.
-    Your task is to STRICTLY evaluate a candidate resume against a job requirement.
+   You are a senior ATS (Applicant Tracking System) evaluator used by large tech companies.
+   Your task is to STRICTLY evaluate a candidate resume against a job requirement.
 
-    You must follow ALL rules below. Violating any rule is a failure.
+   You must follow ALL rules below. Violating any rule is a failure.
 
-    ━━━━━━━━━━━━━━━━━━━━━━
-    JOB CONTEXT
-    ━━━━━━━━━━━━━━━━━━━━━━
-    Job Role: {vacancy_data['job_role']}
-    Experience Level Required: {vacancy_data['experience_level']}
-    Required Skills (primary only): {', '.join(vacancy_data['required_skills'])}
-    Culture Traits (secondary, low weight): {', '.join(vacancy_data['culture_traits'])}
-    Job Description:
-    {vacancy_data.get('description', 'N/A')}
+   ━━━━━━━━━━━━━━━━━━━━━━
+   JOB CONTEXT
+   ━━━━━━━━━━━━━━━━━━━━━━
+   Job Role: {vacancy_data['job_role']}
+   Experience Level Required: {vacancy_data['experience_level']}
+   Required Skills (primary only): {', '.join(vacancy_data['required_skills'])}
+   Culture Traits (secondary, low weight): {', '.join(vacancy_data['culture_traits'])}
+   Job Description:
+   {vacancy_data.get('description', 'N/A')}
 
-    ━━━━━━━━━━━━━━━━━━━━━━
-    RESUME TEXT
-    ━━━━━━━━━━━━━━━━━━━━━━
-    {candidate_data.get('resume_text', '')}
+   ━━━━━━━━━━━━━━━━━━━━━━
+   RESUME TEXT
+   ━━━━━━━━━━━━━━━━━━━━━━
+   {candidate_data.get('resume_text', '')}
 
-    ━━━━━━━━━━━━━━━━━━━━━━
-    CRITICAL RULES (MUST FOLLOW)
-    ━━━━━━━━━━━━━━━━━━━━━━
+   ━━━━━━━━━━━━━━━━━━━━━━
+   CRITICAL RULES (MUST FOLLOW)
+   ━━━━━━━━━━━━━━━━━━━━━━
 
-    1️⃣ EXPERIENCE CALCULATION RULES (NON-NEGOTIABLE)
-    - Count ONLY professional work experience (jobs, internships, freelancing, contracts).
-    - DO NOT count:
-      • Education years
-      • Academic projects
-      • Certifications
-      • Courses
-      • Bootcamps
-      • Self-learning
-    - Experience must be supported by:
-      • Job titles
-      • Company names
-      • Date ranges
-    - If dates are missing or unclear → be conservative.
-    - If overlapping roles exist → DO NOT double count time.
-    - Round DOWN total experience to nearest 0.5 year.
-    - If no valid experience is found → experience_years = 0.
+   1️⃣ EXPERIENCE CALCULATION RULES (NON-NEGOTIABLE)
+   - Count ONLY professional work experience (jobs, internships, freelancing, contracts).
+   - DO NOT count:
+    • Education years
+    • Academic projects
+    • Certifications
+    • Courses
+    • Bootcamps
+    • Self-learning
+   - Experience must be supported by:
+    • Job titles
+    • Company names
+    • Date ranges
+   - If dates are missing or unclear → be conservative.
+   - If overlapping roles exist → DO NOT double count time.
+   - Round DOWN total experience to nearest 0.5 year.
+   - If no valid experience is found → experience_years = 0.
 
-    2️⃣ SKILL EXTRACTION RULES
-    - Extract ONLY skills that are:
-      • Explicitly written in the resume
-      • Technically relevant to the job
-    - DO NOT infer skills.
-    - DO NOT add synonyms unless explicitly mentioned.
-    - If a required skill is not clearly present → treat as missing.
+   2️⃣ SKILL EXTRACTION RULES
+   - Extract ONLY skills that are:
+    • Explicitly written in the resume
+    • Technically relevant to the job
+   - DO NOT infer skills.
+   - DO NOT add synonyms unless explicitly mentioned.
+   - If a required skill is not clearly present → treat as missing.
 
-    3️⃣ SCREENING SCORE RULES (0–100) — REALISTIC ATS MODE (90+ = GOOD MATCH)
+   3️⃣ SCREENING SCORE RULES (0–100) — REALISTIC ATS MODE (90+ = GOOD MATCH)
 
-    The screening_score represents how well the resume matches the job in a real-world ATS.
-    Candidates scoring ≥90 are considered suitable for shortlisting.
+   The screening_score represents how well the resume matches the job in a real-world ATS.
+   Candidates scoring ≥90 are considered suitable for shortlisting.
 
-    Scoring distribution:
-    - Required skills match: max 45 points
-    - Relevant experience (quality > quantity): max 20 points
-    - Role & responsibility alignment: max 25 points
-    - Resume clarity & professionalism: max 10 points
+   Scoring distribution:
+   - Required skills match: max 45 points
+   - Relevant experience (quality > quantity): max 20 points
+   - Role & responsibility alignment: max 25 points
+   - Resume clarity & professionalism: max 10 points
 
     Experience calculation rules (CRITICAL):
     - Count ONLY professional work experience with clear job roles and timelines
@@ -256,7 +256,7 @@ class AIService:
       "extracted_skills": [<string>],
       "screening_notes": "<1–2 concise sentences explaining strengths, gaps, and risks>"
     }
-        """
+       """
 
 
     # ✅ CORRECT generate_completion CALL
@@ -318,6 +318,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
