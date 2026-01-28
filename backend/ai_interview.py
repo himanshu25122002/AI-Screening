@@ -118,7 +118,7 @@ OUTPUT RULES:
 - No formatting.
 - No extra text.
 
-"""
+    """
 
     question = ai_service.generate_completion(prompt)
 
@@ -231,7 +231,7 @@ RETURN STRICT JSON ONLY:
   "recommendation": "Strong Fit | Moderate Fit | Not Recommended",
   "evaluation_notes": "Short, specific justification referencing interview answers and job relevance"
 }
-"""
+    """
 
     raw = ai_service.generate_completion(eval_prompt)
 
