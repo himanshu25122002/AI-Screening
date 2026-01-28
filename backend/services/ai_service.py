@@ -198,13 +198,40 @@ class AIService:
     - DO NOT add synonyms unless explicitly mentioned.
     - If a required skill is not clearly present → treat as missing.
 
-    3️⃣ SCREENING SCORE RULES (0–100)
-    This is an ATS-style score, NOT a human impression.
+    3️⃣ SCREENING SCORE RULES (0–100) — REALISTIC ATS MODE (90+ = GOOD MATCH)
 
-    Base scoring:
-    - Skill match relevance
-    - Role alignment & stability
-    - Experience match
+    The screening_score represents how well the resume matches the job in a real-world ATS.
+    Candidates scoring ≥90 are considered suitable for shortlisting.
+
+    Scoring distribution:
+    - Required skills match: max 45 points
+    - Relevant experience (quality > quantity): max 20 points
+    - Role & responsibility alignment: max 25 points
+    - Resume clarity & professionalism: max 10 points
+
+    Experience calculation rules (CRITICAL):
+    - Count ONLY professional work experience with clear job roles and timelines
+    - DO NOT count education duration, internships < 6 months, or academic projects as full experience
+    - If experience years are unclear, estimate conservatively from job dates only
+
+    90+ score conditions (COMMON FOR GOOD RESUMES):
+    A candidate SHOULD score ≥90 IF:
+    - Most required skills are present (≥70% match is sufficient)
+    - Experience is relevant, even if not perfectly aligned
+    - Job titles or responsibilities reasonably overlap with the role
+    - Resume demonstrates practical, hands-on exposure to the domain
+
+    Scoring guidance:
+    - 90–100 → Strong match, suitable for shortlist
+    - 80–89 → Good candidate, minor gaps
+    - 65–79 → Partial match, needs review
+    - <65 → Weak or unrelated profile
+
+    Important constraints:
+    - Do NOT penalize candidates for missing non-critical skills
+    - Do NOT require perfect keyword matches for high scores
+    - Focus on overall job fit, not strict checklist matching
+
     
 
     4️⃣ BIAS & SAFETY RULES
@@ -291,6 +318,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
