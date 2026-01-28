@@ -203,8 +203,9 @@ class AIService:
 
     Base scoring:
     - Skill match relevance
-    - Experience match
     - Role alignment & stability
+    - Experience match
+    
 
     4️⃣ BIAS & SAFETY RULES
     - Ignore name, gender, age, college prestige.
@@ -290,6 +291,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
