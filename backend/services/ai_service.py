@@ -147,26 +147,89 @@ class AIService:
 
 
 
-        prompt = f"""
-    Analyze this resume as an expert HR and return STRICT JSON ONLY.
+       prompt = f"""
+    You are a senior ATS (Applicant Tracking System) evaluator used by large tech companies.
+    Your task is to STRICTLY evaluate a candidate resume against a job requirement.
 
+    You must follow ALL rules below. Violating any rule is a failure.
+
+    ━━━━━━━━━━━━━━━━━━━━━━
+    JOB CONTEXT
+    ━━━━━━━━━━━━━━━━━━━━━━
     Job Role: {vacancy_data['job_role']}
-    Experience Level: {vacancy_data['experience_level']}
-    Required Skills: {', '.join(vacancy_data['required_skills'])}
-    Culture Traits: {', '.join(vacancy_data['culture_traits'])}
-    Job Description: {vacancy_data.get('description', 'N/A')}
+    Experience Level Required: {vacancy_data['experience_level']}
+    Required Skills (primary only): {', '.join(vacancy_data['required_skills'])}
+    Culture Traits (secondary, low weight): {', '.join(vacancy_data['culture_traits'])}
+    Job Description:
+    {vacancy_data.get('description', 'N/A')}
 
-    Resume:
+    ━━━━━━━━━━━━━━━━━━━━━━
+    RESUME TEXT
+    ━━━━━━━━━━━━━━━━━━━━━━
     {candidate_data.get('resume_text', '')}
 
-    Return ONLY this JSON:
-    {{
-      "screening_score": 0,
-      "extracted_skills": [],
-      "experience_years": 0,
-      "screening_notes": ""
-    }}
+    ━━━━━━━━━━━━━━━━━━━━━━
+    CRITICAL RULES (MUST FOLLOW)
+    ━━━━━━━━━━━━━━━━━━━━━━
+
+    1️⃣ EXPERIENCE CALCULATION RULES (NON-NEGOTIABLE)
+    - Count ONLY professional work experience (jobs, internships, freelancing, contracts).
+    - DO NOT count:
+      • Education years
+      • Academic projects
+      • Certifications
+      • Courses
+      • Bootcamps
+      • Self-learning
+    - Experience must be supported by:
+      • Job titles
+      • Company names
+      • Date ranges
+    - If dates are missing or unclear → be conservative.
+    - If overlapping roles exist → DO NOT double count time.
+    - Round DOWN total experience to nearest 0.5 year.
+    - If no valid experience is found → experience_years = 0.
+
+    2️⃣ SKILL EXTRACTION RULES
+    - Extract ONLY skills that are:
+      • Explicitly written in the resume
+      • Technically relevant to the job
+    - DO NOT infer skills.
+    - DO NOT add synonyms unless explicitly mentioned.
+    - If a required skill is not clearly present → treat as missing.
+
+    3️⃣ SCREENING SCORE RULES (0–100)
+    This is an ATS-style score, NOT a human impression.
+
+    Base scoring:
+    - Skill match relevance
+    - Experience match
+    - Role alignment & stability
+
+    4️⃣ BIAS & SAFETY RULES
+    - Ignore name, gender, age, college prestige.
+    - Ignore formatting quality.
+    - Ignore personal hobbies unless job-relevant.
+
+    5️⃣ VERIFICATION STEP (SILENT)
+    Before answering:
+    - Re-check that experience_years does NOT include education.
+    - Re-check that every extracted skill appears verbatim in resume.
+    - Re-check that score matches rules above.
+
+    ━━━━━━━━━━━━━━━━━━━━━━
+    OUTPUT FORMAT (STRICT)
+    ━━━━━━━━━━━━━━━━━━━━━━
+    Return ONLY valid JSON. No explanations. No markdown.
+
+    {
+      "screening_score": <integer 0-100>,
+      "experience_years": <number>,
+      "extracted_skills": [<string>],
+      "screening_notes": "<1–2 concise sentences explaining strengths, gaps, and risks>"
+    }
     """
+
 
     # ✅ CORRECT generate_completion CALL
         response_text = self.generate_completion(prompt)
@@ -227,6 +290,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
