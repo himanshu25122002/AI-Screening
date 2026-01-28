@@ -77,7 +77,7 @@ class AIService:
 
     Resume:
     {resume_text}
-    """
+        """
 
         try:
             response = self.generate_completion(prompt).strip()
@@ -256,7 +256,7 @@ class AIService:
       "extracted_skills": [<string>],
       "screening_notes": "<1–2 concise sentences explaining strengths, gaps, and risks>"
     }
-    """
+        """
 
 
     # ✅ CORRECT generate_completion CALL
@@ -318,6 +318,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
