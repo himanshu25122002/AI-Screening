@@ -147,7 +147,7 @@ class AIService:
 
 
 
-       prompt = f"""
+        prompt = f"""
    You are a senior ATS (Applicant Tracking System) evaluator used by large tech companies.
    Your task is to STRICTLY evaluate a candidate resume against a job requirement.
 
@@ -256,7 +256,7 @@ class AIService:
       "extracted_skills": [<string>],
       "screening_notes": "<1–2 concise sentences explaining strengths, gaps, and risks>"
     }
-       """
+        """
 
 
     # ✅ CORRECT generate_completion CALL
@@ -318,6 +318,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
