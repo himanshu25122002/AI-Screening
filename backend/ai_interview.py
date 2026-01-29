@@ -62,7 +62,7 @@ def next_question(payload: InterviewPayload):
 
 
 
-    # 3️⃣ Save previous answer safely
+    
     if payload.answer and transcript:
         transcript[-1]["answer"] = payload.answer
 
@@ -73,15 +73,37 @@ def next_question(payload: InterviewPayload):
         else "No previous answer yet."
     )
 
-    vacancy = (
-            supabase.table("vacancies")
-            .select("*")
-            .eq("id", vacancy_id)
-            .single()
-            .execute()
+    
+    candidate_res = (
+        supabase.table("candidates")
+        .select("*")
+        .eq("id", payload.candidate_id)
+        .single()
+        .execute()
     )
 
-    vacancy_data = vacancy.data
+    candidate_data = candidate_res.data
+
+    vacancy_id = candidate_data.get("vacancy_id")
+
+    if not vacancy_id:
+        return {
+            "completed": True,
+            "error": "Candidate is not linked to any vacancy"
+        }
+
+
+
+    vacancy_res = (
+        supabase.table("vacancies")
+        .select("*")
+        .eq("id", vacancy_id)
+        .single()
+        .execute()
+    )
+
+    vacancy_data = vacancy_res.data
+
 
     # 4️⃣ Generate next question (GPT-5-mini SAFE)
     prompt = f"""
