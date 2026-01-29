@@ -148,114 +148,89 @@ class AIService:
 
 
         prompt = f"""
-   You are a senior ATS (Applicant Tracking System) evaluator used by large tech companies.
-   Your task is to STRICTLY evaluate a candidate resume against a job requirement.
+  
+You are a production-grade ATS scoring engine used by modern hiring platforms.
+Your task is to evaluate resume-to-job fit realistically and FAIRLY.
 
-   You must follow ALL rules below. Violating any rule is a failure.
+━━━━━━━━━━━━━━━━━━━━━━
+JOB CONTEXT
+━━━━━━━━━━━━━━━━━━━━━━
+Job Role: {vacancy_data['job_role']}
+Experience Level Target: {vacancy_data['experience_level']}
+Required Skills (primary): {', '.join(vacancy_data['required_skills'])}
+Culture Traits (low weight): {', '.join(vacancy_data['culture_traits'])}
+Job Description:
+{vacancy_data.get('description', 'N/A')}
 
-   ━━━━━━━━━━━━━━━━━━━━━━
-   JOB CONTEXT
-   ━━━━━━━━━━━━━━━━━━━━━━
-   Job Role: {vacancy_data['job_role']}
-   Experience Level Required: {vacancy_data['experience_level']}
-   Required Skills (primary only): {', '.join(vacancy_data['required_skills'])}
-   Culture Traits (secondary, low weight): {', '.join(vacancy_data['culture_traits'])}
-   Job Description:
-   {vacancy_data.get('description', 'N/A')}
+━━━━━━━━━━━━━━━━━━━━━━
+RESUME TEXT
+━━━━━━━━━━━━━━━━━━━━━━
+{candidate_data.get('resume_text', '')}
 
-   ━━━━━━━━━━━━━━━━━━━━━━
-   RESUME TEXT
-   ━━━━━━━━━━━━━━━━━━━━━━
-   {candidate_data.get('resume_text', '')}
+━━━━━━━━━━━━━━━━━━━━━━
+EXPERIENCE CALCULATION (STRICT BUT FAIR)
+━━━━━━━━━━━━━━━━━━━━━━
+- Count ONLY professional work experience:
+  jobs, internships, freelancing, contracts
+- DO NOT count:
+  education duration, academic projects, courses, certifications
+- Experience must be supported by role + company + dates
+- If dates overlap → count once
+- Round DOWN to nearest 0.5 year
+- If no valid experience → experience_years = 0
 
-   ━━━━━━━━━━━━━━━━━━━━━━
-   CRITICAL RULES (MUST FOLLOW)
-   ━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━
+SKILL EXTRACTION RULES
+━━━━━━━━━━━━━━━━━━━━━━
+- Extract ONLY skills explicitly written in the resume
+- Do NOT infer or hallucinate
+- Do NOT penalize missing secondary or optional skills
+- Required skill match is considered GOOD if ≥70%
 
-   1️⃣ EXPERIENCE CALCULATION RULES (NON-NEGOTIABLE)
-   - Count ONLY professional work experience (jobs, internships, freelancing, contracts).
-   - DO NOT count:
-    • Education years
-    • Academic projects
-    • Certifications
-    • Courses
-    • Bootcamps
-    • Self-learning
-   - Experience must be supported by:
-    • Job titles
-    • Company names
-    • Date ranges
-   - If dates are missing or unclear → be conservative.
-   - If overlapping roles exist → DO NOT double count time.
-   - Round DOWN total experience to nearest 0.5 year.
-   - If no valid experience is found → experience_years = 0.
+━━━━━━━━━━━━━━━━━━━━━━
+SCORING PHILOSOPHY (VERY IMPORTANT)
+━━━━━━━━━━━━━━━━━━━━━━
+This system is calibrated so that:
 
-   2️⃣ SKILL EXTRACTION RULES
-   - Extract ONLY skills that are:
-    • Explicitly written in the resume
-    • Technically relevant to the job
-   - DO NOT infer skills.
-   - DO NOT add synonyms unless explicitly mentioned.
-   - If a required skill is not clearly present → treat as missing.
+▶ A DECENT, RELEVANT resume SHOULD score **90+**
+▶ 90 is NOT exceptional — it is the NORMAL shortlist score
+▶ Scores below 90 should be used ONLY when there are clear gaps
 
-   3️⃣ SCREENING SCORE RULES (0–100) — REALISTIC ATS MODE (90+ = GOOD MATCH)
 
-   The screening_score represents how well the resume matches the job in a real-world ATS.
-   Candidates scoring ≥90 are considered suitable for shortlisting.
 
-   Scoring distribution:
-   - Required skills match: max 45 points
-   - Relevant experience (quality > quantity): max 20 points
-   - Role & responsibility alignment: max 25 points
-   - Resume clarity & professionalism: max 10 points
+DO NOT deduct for:
+- Minor keyword differences
+- Non-critical skill gaps
+- Imperfect job title wording
+- Resume formatting or writing style
 
-    Experience calculation rules (CRITICAL):
-    - Count ONLY professional work experience with clear job roles and timelines
-    - DO NOT count education duration, internships < 6 months, or academic projects as full experience
-    - If experience years are unclear, estimate conservatively from job dates only
+━━━━━━━━━━━━━━━━━━━━━━
+SCORE INTERPRETATION
+━━━━━━━━━━━━━━━━━━━━━━
+- 90–100 → Strong match, shortlist-ready
+- 80–89 → Good profile, minor gaps
+- 65–79 → Partial match
+- <65 → Weak or unrelated
 
-    90+ score conditions (COMMON FOR GOOD RESUMES):
-    A candidate SHOULD score ≥90 IF:
-    - Most required skills are present (≥70% match is sufficient)
-    - Experience is relevant, even if not perfectly aligned
-    - Job titles or responsibilities reasonably overlap with the role
-    - Resume demonstrates practical, hands-on exposure to the domain
+━━━━━━━━━━━━━━━━━━━━━━
+FINAL VERIFICATION (SILENT)
+━━━━━━━━━━━━━━━━━━━━━━
+Before responding:
+- Ensure experience_years excludes education
+- Ensure extracted_skills appear verbatim in resume
+- Ensure score reflects REAL hiring behavior
 
-    Scoring guidance:
-    - 90–100 → Strong match, suitable for shortlist
-    - 80–89 → Good candidate, minor gaps
-    - 65–79 → Partial match, needs review
-    - <65 → Weak or unrelated profile
+━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT (STRICT JSON ONLY)
+━━━━━━━━━━━━━━━━━━━━━━
+{{
+  "screening_score": 0,
+  "extracted_skills": [],
+  "experience_years": 0,
+  "screening_notes": ""
+}}
 
-    Important constraints:
-    - Do NOT penalize candidates for missing non-critical skills
-    - Do NOT require perfect keyword matches for high scores
-    - Focus on overall job fit, not strict checklist matching
 
-    
-
-    4️⃣ BIAS & SAFETY RULES
-    - Ignore name, gender, age, college prestige.
-    - Ignore formatting quality.
-    - Ignore personal hobbies unless job-relevant.
-
-    5️⃣ VERIFICATION STEP (SILENT)
-    Before answering:
-    - Re-check that experience_years does NOT include education.
-    - Re-check that every extracted skill appears verbatim in resume.
-    - Re-check that score matches rules above.
-
-    ━━━━━━━━━━━━━━━━━━━━━━
-    OUTPUT FORMAT (STRICT)
-    ━━━━━━━━━━━━━━━━━━━━━━
-    Return ONLY valid JSON. No explanations. No markdown.
-
-    {{
-      "screening_score": <number>,
-      "extracted_skills": [<list of skills>],
-      "experience_years": <number>,
-      "screening_notes": "<detailed analysis>"
-    }}
         """
 
 
@@ -318,6 +293,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
