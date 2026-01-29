@@ -79,9 +79,9 @@ def next_question(payload: InterviewPayload):
             .eq("id", vacancy_id)
             .single()
             .execute()
-        )
+    )
 
-        vacancy_data = vacancy.data
+    vacancy_data = vacancy.data
 
     # 4️⃣ Generate next question (GPT-5-mini SAFE)
     prompt = f"""
