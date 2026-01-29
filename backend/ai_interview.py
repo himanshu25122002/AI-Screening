@@ -73,6 +73,16 @@ def next_question(payload: InterviewPayload):
         else "No previous answer yet."
     )
 
+    vacancy = (
+            supabase.table("vacancies")
+            .select("*")
+            .eq("id", vacancy_id)
+            .single()
+            .execute()
+        )
+
+        vacancy_data = vacancy.data
+
     # 4️⃣ Generate next question (GPT-5-mini SAFE)
     prompt = f"""
 You are a senior human interviewer conducting a real hiring interview.
