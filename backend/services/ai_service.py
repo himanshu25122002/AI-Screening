@@ -250,12 +250,12 @@ class AIService:
     ━━━━━━━━━━━━━━━━━━━━━━
     Return ONLY valid JSON. No explanations. No markdown.
 
-    {
-      "screening_score": 0,
-      "experience_years": 0,
-      "extracted_skills": [],
-      "screening_notes": ""
-    }
+    {{
+      "screening_score": <number>,
+      "extracted_skills": [<list of skills>],
+      "experience_years": <number>,
+      "screening_notes": "<detailed analysis>"
+    }}
         """
 
 
@@ -318,6 +318,7 @@ class AIService:
         return data
 
 ai_service = AIService()
+
 
 
 
