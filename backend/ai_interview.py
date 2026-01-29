@@ -222,15 +222,15 @@ SCORING CALIBRATION (INTERNAL — DO NOT MENTION):
 - <65 → Not suitable for this role
 
 RETURN STRICT JSON ONLY:
-{
-  "skill_score": <0–100>,
-  "communication_score": <0–100>,
-  "problem_solving_score": <0–100>,
-  "culture_fit_score": <0–100>,
-  "overall_score": <0–100>,
-  "recommendation": "Strong Fit | Moderate Fit | Not Recommended",
-  "evaluation_notes": "Short, specific justification referencing interview answers and job relevance"
-}
+{{
+  "skill_score": <0-100>,
+  "communication_score": <0-100>,
+  "problem_solving_score": <0-100>,
+  "culture_fit_score": <0-100>,
+  "overall_score": <0-100>,
+  "recommendation": "<Strong Fit | Moderate Fit | Not Recommended>",
+  "evaluation_notes": "<short explanation>"
+}}
     """
 
     raw = ai_service.generate_completion(eval_prompt)
