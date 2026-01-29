@@ -182,6 +182,36 @@ OUTPUT RULES:
 # =====================================================
 @router.post("/ai-interview/evaluate")
 def evaluate_interview(payload: InterviewPayload):
+    
+    candidate_res = (
+        supabase.table("candidates")
+        .select("*")
+        .eq("id", payload.candidate_id)
+        .single()
+        .execute()
+    )
+
+    candidate_data = candidate_res.data
+
+
+    vacancy_id = candidate_data.get("vacancy_id")
+
+    if not vacancy_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Candidate is not linked to any vacancy"
+        )
+
+
+    vacancy_res = (
+        supabase.table("vacancies")
+        .select("*")
+        .eq("id", vacancy_id)
+        .single()
+        .execute()
+    )
+
+    vacancy_data = vacancy_res.data
 
     session_res = (
         supabase.table("ai_interview_sessions")
