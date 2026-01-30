@@ -197,17 +197,25 @@ if page == "📥 HR Intake":
 # =========================
 if page == "📊 Hiring Pipeline":
 
-    col1, col2 = st.columns([0.9, 0.1])
-
+    # ---------- Header with Refresh ----------
+    col1, col2 = st.columns([8, 1])
     with col1:
-        st.markdown("## 📊 Hiring Pipeline Dashboard")
-
+        st.title("📊 Hiring Pipeline Dashboard")
     with col2:
-        if st.button("🔄 Refresh", help="Reload pipeline data"):
-            st.experimental_rerun()
+        if st.button("🔄 Refresh"):
+            st.session_state["refresh_pipeline"] = True
+            st.rerun()
 
+    # ---------- Init refresh flag ----------
+    if "refresh_pipeline" not in st.session_state:
+        st.session_state["refresh_pipeline"] = False
+
+    # ---------- Fetch candidates ----------
     with st.spinner("Fetching candidates..."):
         res = api_get("/candidates")
+
+    # Reset flag AFTER reload
+    st.session_state["refresh_pipeline"] = False
 
     if res.status_code != 200:
         st.error("Failed to load candidates")
@@ -246,3 +254,5 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
+
+
