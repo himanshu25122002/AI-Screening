@@ -137,7 +137,7 @@ RESUME TEXT
             ]):
                 continue
 
-            if re.match(r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$", line):
+            if re.match(r"^[A-Za-z]+(?:\s[A-Za-z]+){1,3}$", line):
                 return line
 
         return None
@@ -185,9 +185,19 @@ RESUME TEXT
 
             if response.lower() == "none":
                 return None
-            if re.match(r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$", response):
-                return response
+           
+            clean = response.strip()
+            if any(x in clean.lower() for x in [
+                "engineer", "developer", "resume", "cv",
+                "linkedin", "github", "@", "|"
+            ]):
+                return None
+
+            if re.match(r"^[A-Za-z]+(?:\s[A-Za-z]+){1,3}$", clean):
+                return clean.title()
+
             return None
+
 
         except Exception as e:
             print("❌ AI name extraction failed:", e)
@@ -407,6 +417,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
