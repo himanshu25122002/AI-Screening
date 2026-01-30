@@ -2,9 +2,9 @@ import json
 from typing import Dict, List, Any
 from datetime import datetime
 import re
-from config import config
-from database import supabase
-from services.email_service import email_service
+from backend.config import config
+from backend.database import supabase
+from backend.services.email_service import email_service
 
 from openai import OpenAI
 
@@ -407,6 +407,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
