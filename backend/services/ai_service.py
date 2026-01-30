@@ -243,14 +243,14 @@ RESUME TEXT
 
         
 
-        current_name = candidate_data.get("name", "")
+        PLACEHOLDER_NAMES = {"candidate", "unknown", ""}
+
+        current_name_raw = candidate_data.get("name") or ""
+        current_name = current_name_raw.strip().lower()
+
         extracted_name = self.extract_name(resume_text)
 
-        if extracted_name and (
-            not current_name or
-            current_name.lower().startswith("candidate") or
-            current_name.lower() == "unknown"
-        ):
+        if extracted_name and current_name in PLACEHOLDER_NAMES:
             print("✅ Updating candidate name:", extracted_name)
 
             supabase.table("candidates").update({
@@ -407,6 +407,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
