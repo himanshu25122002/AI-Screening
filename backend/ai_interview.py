@@ -5,10 +5,10 @@ import json
 
 from openai import OpenAI
 
-from database import supabase
-from services.email_service import email_service
-from config import config
-from services.ai_service import ai_service
+from backend.database import supabase
+from backend.services.email_service import email_service
+from backend.config import config
+from backend.services.ai_service import ai_service
 
 router = APIRouter()
 
