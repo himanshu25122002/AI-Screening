@@ -1,7 +1,7 @@
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, To, Content
 from config import config
-from database import supabase
+from backend.database import supabase
 from datetime import datetime
 
 def is_real_email(email: str) -> bool:
@@ -215,6 +215,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
