@@ -64,21 +64,33 @@ class ResumeParser:
         if phone_match:
             info["phone"] = phone_match.group(0)
 
-        # 👤 NAME — first non-empty line
+        
         for line in lines[:5]:
             clean = line.strip()
-            if "@" in clean:
+            if not clean:
                 continue
-            if len(clean.split()) >= 2:
+            if any(x in clean.lower() for x in [
+                "resume", "curriculum", "vitae", "profile",
+                "summary", "engineer", "developer", "intern",
+                "student", "b.tech", "m.tech", "linkedin", "github"
+            ]):
+                continue
+
+            if "@" in clean or any(char.isdigit() for char in clean):
+                continue
+
+            if re.match(r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$", clean):
                 info["name"] = clean
                 break
+
 
         # 🚨 GUARANTEE EMAIL EXISTS
         if not info["email"]:
             info["email"] = ResumeParser._generate_fallback_email()
 
         if not info["name"]:
-            info["name"] = "Unknown"
+            info["name"] = ""
+
 
         return info
 
@@ -88,6 +100,7 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
 
