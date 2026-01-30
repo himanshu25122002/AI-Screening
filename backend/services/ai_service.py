@@ -86,7 +86,7 @@ class AIService:
                 return None
 
         # 🔐 Final regex validation (critical)
-            match = re.search(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", response)
+            match = re.search(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9-.]+$", response)
             return match.group(0) if match else None
 
         except Exception as e:
@@ -293,6 +293,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
