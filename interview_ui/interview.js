@@ -4,7 +4,7 @@
  * NO BACKEND CHANGES REQUIRED
  *************************************************/
 
-const API_BASE = "https://hiring-backend-zku9.onrender.com"; // same backend
+const API_BASE = "https://ai-screening-wbb0.onrender.com"; // same backend
 const params = new URLSearchParams(window.location.search);
 const candidateId = params.get("candidate_id");
 let interviewCompleted = false;
