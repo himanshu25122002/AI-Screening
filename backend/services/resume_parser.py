@@ -67,6 +67,8 @@ class ResumeParser:
         # 👤 NAME — first non-empty line
         for line in lines[:5]:
             clean = line.strip()
+            if "@" in clean:
+                continue
             if len(clean.split()) >= 2:
                 info["name"] = clean
                 break
@@ -86,5 +88,6 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
