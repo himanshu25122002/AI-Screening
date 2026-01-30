@@ -14,7 +14,7 @@ router = APIRouter()
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-MAX_QUESTIONS = 10
+MAX_QUESTIONS = 5
 
 
 class InterviewPayload(BaseModel):
