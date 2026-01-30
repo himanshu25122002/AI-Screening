@@ -123,8 +123,83 @@ RESUME TEXT
            return email
        return self.extract_email_ai(resume_text)
 
+    def extract_name_regex(self, text: str) -> str | None:
+        if not text:
+            return None
+
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        top_lines = lines[:5]  # names almost always appear here
+
+        for line in top_lines:
+            if any(x in line.lower() for x in [
+                "resume", "curriculum", "cv", "email", "@", "phone",
+                "linkedin", "github", "profile"
+            ]):
+                continue
+
+            if re.match(r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$", line):
+                return line
+
+        return None
+
+
+    def extract_name_ai(self, resume_text: str) -> str | None:
+
+        if not resume_text or len(resume_text.strip()) < 30:
+            return None
+
+        prompt = f"""
+You are an automated resume parsing system used by enterprise ATS platforms.
+
+Your task is to extract the candidate’s FULL NAME from the resume text.
+
+━━━━━━━━━━━━━━━━━━━━━━
+STRICT EXTRACTION RULES
+━━━━━━━━━━━━━━━━━━━━━━
+1. Extract ONLY the candidate's name explicitly written in the resume.
+2. The name is usually at the top of the resume.
+3. Do NOT infer or guess a name.
+4. Do NOT extract usernames, emails, or profile handles.
+5. Do NOT include titles (Mr, Ms, Dr, Eng, etc).
+6. Do NOT include extra words or formatting.
+7. If multiple names exist, return the most prominent candidate name.
+8. If no clear candidate name is found, return EXACTLY:
+NONE
+
+━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT RULES (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━
+- Return ONLY the full name or NONE
+- No explanations
+- No punctuation
+- No formatting
+
+━━━━━━━━━━━━━━━━━━━━━━
+RESUME TEXT
+━━━━━━━━━━━━━━━━━━━━━━
+{resume_text}
+    """
+
+        try:
+            response = self.generate_completion(prompt).strip()
+
+            if response.lower() == "none":
+                return None
+            if re.match(r"^[A-Z][a-z]+(?:\s[A-Z][a-z]+){1,2}$", response):
+                return response
+            return None
+
+        except Exception as e:
+            print("❌ AI name extraction failed:", e)
+            return None
 
     
+    def extract_name(self, resume_text: str) -> str | None:
+        name = self.extract_name_regex(resume_text)
+        if name:
+            return name
+        return self.extract_name_ai(resume_text)
+
     # ================================
     # 🧠 RESUME SCREENING (FIXED)
     # ================================
@@ -164,11 +239,26 @@ RESUME TEXT
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("id", candidate_id).execute()
 
-   
             candidate_data["email"] = extracted_email
 
+        
 
+        current_name = candidate_data.get("name", "")
+        extracted_name = self.extract_name(resume_text)
 
+        if extracted_name and (
+            not current_name or
+            current_name.lower().startswith("candidate") or
+            current_name.lower() == "unknown"
+        ):
+            print("✅ Updating candidate name:", extracted_name)
+
+            supabase.table("candidates").update({
+                "name": extracted_name,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", candidate_id).execute()
+
+            candidate_data["name"] = extracted_name
 
 
         prompt = f"""
@@ -317,6 +407,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
