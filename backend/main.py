@@ -107,8 +107,8 @@ async def create_candidate(
         # =========================
         # FALLBACK LOGIC (CRITICAL)
         # =========================
-        final_name = name or basic_info.get("name") or "Unknown"
-
+        final_name = name or basic_info.get("name") or "Candidate"
+        
         extracted_email = email or basic_info.get("email")
         if not extracted_email:
             extracted_email = ai_service.extract_email_from_resume(resume_text)
@@ -459,6 +459,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
