@@ -4,9 +4,9 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from database import supabase
-from services.email_service import email_service
-from config import config
+from backend.database import supabase
+from backend.services.email_service import email_service
+from backend.config import config
 
 router = APIRouter()
 
