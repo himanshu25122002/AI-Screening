@@ -66,17 +66,41 @@ class AIService:
              return None
 
         prompt = f"""
-    Extract the candidate's EMAIL ADDRESS from the resume text below.
+You are an automated resume parsing system used by enterprise ATS platforms.
 
-    Rules:
-    - Return ONLY the email address
-    - If email is written like (name at gmail dot com), convert it to real email
-    - If no clear email is present, return NONE
-    - Do NOT guess
-    - Do NOT invent
+Your task is to extract the candidate’s EMAIL ADDRESS from the resume text.
 
-    Resume:
-    {resume_text}
+━━━━━━━━━━━━━━━━━━━━━━
+STRICT EXTRACTION RULES
+━━━━━━━━━━━━━━━━━━━━━━
+
+1. Extract ONLY an email address that is explicitly present in the resume text.
+2. If the email is obfuscated, normalize it:
+   - Examples:
+     - "name at gmail dot com" → name@gmail.com
+     - "name [at] domain [dot] com" → name@domain.com
+3. Do NOT infer, guess, modify, shorten, or reconstruct an email.
+4. Do NOT generate an email from the candidate’s name.
+5. If multiple emails are present, return the most complete and professional-looking one.
+6. If no valid email is clearly found, return EXACTLY:
+   NONE
+
+━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT RULES (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━
+
+- Return ONLY the email address or the word NONE
+- No explanations
+- No extra text
+- No punctuation
+- No formatting
+
+━━━━━━━━━━━━━━━━━━━━━━
+RESUME TEXT
+━━━━━━━━━━━━━━━━━━━━━━
+
+{resume_text}
+
         """
 
         try:
@@ -293,6 +317,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
