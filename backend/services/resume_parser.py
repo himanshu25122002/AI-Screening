@@ -1,54 +1,96 @@
-import PyPDF2
 import io
 import re
 import uuid
 from typing import Dict
 
+import PyPDF2
+from pdf2image import convert_from_bytes
+import pytesseract
+
 
 class ResumeParser:
     @staticmethod
     def parse_pdf(file_content: bytes) -> str:
+        """
+        Hybrid PDF parser:
+        1) Try PyPDF2 (text-based PDFs)
+        2) Fallback to OCR (Canva / scanned PDFs)
+        """
+
+        text = ""
+
+        # =========================
+        # 1️⃣ PyPDF2 (FAST PATH)
+        # =========================
         try:
             pdf_file = io.BytesIO(file_content)
             pdf_reader = PyPDF2.PdfReader(pdf_file)
 
-            text = ""
             for page in pdf_reader.pages:
-                extracted = page.extract_text()
-                if extracted:
-                    text += extracted + "\n"
-
-            return text.strip()
+                extracted = page.extract_text() or ""
+                text += extracted + "\n"
 
         except Exception as e:
-            print(f"Error parsing PDF: {e}")
-            return ""
+            print(f"⚠️ PyPDF2 parsing failed: {e}")
+
+        # =========================
+        # 2️⃣ OCR FALLBACK
+        # =========================
+        if not text or len(text.strip()) < 50:
+            print("⚠️ OCR fallback triggered (image-based PDF detected)")
+
+            try:
+                images = convert_from_bytes(file_content, dpi=300)
+                ocr_text = []
+
+                for img in images:
+                    ocr_text.append(
+                        pytesseract.image_to_string(
+                            img,
+                            config="--psm 6"
+                        )
+                    )
+
+                text = "\n".join(ocr_text)
+
+            except Exception as e:
+                print(f"❌ OCR failed: {e}")
+
+        return text.strip()
 
     @staticmethod
     def parse_text(file_content: bytes) -> str:
         try:
             return file_content.decode("utf-8", errors="ignore")
         except Exception as e:
-            print(f"Error parsing text: {e}")
+            print(f"❌ Error parsing text file: {e}")
             return ""
 
     @staticmethod
     def extract_basic_info(resume_text: str) -> Dict[str, str]:
+        """
+        VERY conservative extraction.
+        Name extraction is intentionally strict.
+        AI will refine later in screening stage.
+        """
+
         info = {
             "name": "",
             "email": "",
             "phone": ""
         }
 
-        if not resume_text:
-            # 🔥 ABSOLUTE FALLBACK
+        if not resume_text or len(resume_text.strip()) < 30:
+            # 🔥 Absolute fallback
             info["email"] = ResumeParser._generate_fallback_email()
-            info["name"] = "Unknown"
+            info["name"] = ""
             return info
 
         lines = resume_text.split("\n")
 
-        # 🔍 EMAIL — scan FULL resume
+        # =========================
+        # 📧 EMAIL (full scan)
+        # =========================
         email_match = re.search(
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
             resume_text
@@ -56,7 +98,9 @@ class ResumeParser:
         if email_match:
             info["email"] = email_match.group(0)
 
+        # =========================
         # 📞 PHONE
+        # =========================
         phone_match = re.search(
             r'(\+?\d{1,3}[\s\-]?)?\(?\d{3,4}\)?[\s\-]?\d{3}[\s\-]?\d{3,4}',
             resume_text
@@ -64,11 +108,15 @@ class ResumeParser:
         if phone_match:
             info["phone"] = phone_match.group(0)
 
-        
+        # =========================
+        # 👤 NAME (STRICT TOP LINES)
+        # =========================
         for line in lines[:5]:
             clean = line.strip()
+
             if not clean:
                 continue
+
             if any(x in clean.lower() for x in [
                 "resume", "curriculum", "vitae", "profile",
                 "summary", "engineer", "developer", "intern",
@@ -83,14 +131,14 @@ class ResumeParser:
                 info["name"] = clean
                 break
 
-
-        # 🚨 GUARANTEE EMAIL EXISTS
+        # =========================
+        # 🚨 GUARANTEES
+        # =========================
         if not info["email"]:
             info["email"] = ResumeParser._generate_fallback_email()
 
         if not info["name"]:
             info["name"] = ""
-
 
         return info
 
@@ -100,7 +148,3 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
-
-
-
-
