@@ -8,7 +8,7 @@ import pandas as pd
 BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 
 # =========================
-# Candidate interview routing
+# Candidate interview routing (UNCHANGED)
 # =========================
 params = st.query_params
 candidate_id = params.get("candidate_id")
@@ -18,7 +18,7 @@ if candidate_id:
         r = requests.get(
             f"{BACKEND_URL}/candidate-form/status",
             params={"candidate_id": candidate_id},
-            timeout=10
+            timeout=60
         )
         form_completed = r.json().get("form_completed", False)
     except Exception:
@@ -57,9 +57,9 @@ if candidate_id:
 
     st.stop()
 
-
-
-
+# =========================
+# PAGE CONFIG
+# =========================
 st.set_page_config(
     page_title="Futuready AI Hiring System",
     page_icon="💼",
@@ -76,13 +76,20 @@ def api_get(endpoint):
     return requests.get(f"{BACKEND_URL}{endpoint}")
 
 # =========================
-# SIDEBAR
+# SESSION-SAFE NAVIGATION
 # =========================
+if "page" not in st.session_state:
+    st.session_state.page = "📥 HR Intake"  # default only ONCE
+
 st.sidebar.title("🧭 Navigation")
+
 page = st.sidebar.radio(
     "Select Page",
-    ["📥 HR Intake", "📊 Hiring Pipeline"]
+    ["📥 HR Intake", "📊 Hiring Pipeline"],
+    index=0 if st.session_state.page == "📥 HR Intake" else 1
 )
+
+st.session_state.page = page
 
 # =========================
 # PAGE 1 — HR INTAKE
@@ -112,7 +119,6 @@ if page == "📥 HR Intake":
             value="Collaborative, Growth-minded, Innovative"
         )
 
-        # ✅ NEW — Job Description
         job_description = st.text_area(
             "Job Description / Responsibilities *",
             placeholder=(
@@ -136,7 +142,6 @@ if page == "📥 HR Intake":
             st.stop()
 
         with st.spinner("Creating job and uploading resumes..."):
-            # 1️⃣ Create Vacancy
             vacancy_res = api_post(
                 "/vacancies",
                 json={
@@ -156,7 +161,6 @@ if page == "📥 HR Intake":
 
             vacancy_id = vacancy_res.json()["data"]["id"]
 
-            # 2️⃣ Upload resumes
             success_count = 0
             failed_files = []
 
@@ -178,7 +182,7 @@ if page == "📥 HR Intake":
                     else:
                         failed_files.append(resume.name)
 
-                except Exception as e:
+                except Exception:
                     failed_files.append(resume.name)
 
             st.success(f"✅ {success_count} resumes uploaded successfully!")
@@ -192,7 +196,15 @@ if page == "📥 HR Intake":
 # PAGE 2 — PIPELINE DASHBOARD
 # =========================
 if page == "📊 Hiring Pipeline":
-    st.title("📊 Hiring Pipeline Dashboard")
+
+    col1, col2 = st.columns([0.9, 0.1])
+
+    with col1:
+        st.markdown("## 📊 Hiring Pipeline Dashboard")
+
+    with col2:
+        if st.button("🔄 Refresh", help="Reload pipeline data"):
+            st.experimental_rerun()
 
     with st.spinner("Fetching candidates..."):
         res = api_get("/candidates")
@@ -234,11 +246,3 @@ if page == "📊 Hiring Pipeline":
                 use_container_width=True,
                 hide_index=True
             )
-
-
-
-
-
-
-
-
