@@ -1,10 +1,10 @@
 import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from config import config
-from database import supabase
+from backend.config import config
+from backend.database import supabase
 from datetime import datetime
-from services.email_service import email_service
+from backend.services.email_service import email_service
 
 
 class GoogleSheetsService:
@@ -183,3 +183,4 @@ class GoogleSheetsService:
 
 
 google_sheets_service = GoogleSheetsService()
+
