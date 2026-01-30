@@ -1,6 +1,6 @@
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, To, Content
-from config import config
+from backend.config import config
 from backend.database import supabase
 from datetime import datetime
 
@@ -215,6 +215,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
