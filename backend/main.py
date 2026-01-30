@@ -5,19 +5,19 @@ from datetime import datetime
 from fastapi import BackgroundTasks
 from uuid import uuid4
 
-from models import (
+from backend.models import (
     VacancyCreate, VacancyResponse, CandidateCreate, CandidateResponse,
     ResumeScreeningRequest, ResumeScreeningResponse, AIInterviewRequest,
     AIInterviewResponse, FinalInterviewSchedule, EmailRequest, GoogleFormSyncRequest
 )
-from database import supabase
-from services.ai_service import ai_service
-from services.email_service import email_service
-from services.google_sheets_service import google_sheets_service
-from services.resume_parser import resume_parser
-from config import config
-from ai_interview import router as interview_router
-from services.candidate_form import router as candidate_form_router
+from backend.database import supabase
+from backend.services.ai_service import ai_service
+from backend.services.email_service import email_service
+from backend.services.google_sheets_service import google_sheets_service
+from backend.services.resume_parser import resume_parser
+from backend.config import config
+from backend.ai_interview import router as interview_router
+from backend.services.candidate_form import router as candidate_form_router
 
 
 
@@ -459,6 +459,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
