@@ -221,7 +221,7 @@ if page == "📊 Hiring Pipeline":
 
     df = pd.DataFrame(candidates)
 
-    # ---------- Fetch vacancies (for Job Name mapping) ----------
+    # ---------- Fetch vacancies (Job Name mapping) ----------
     vacancy_res = api_get("/vacancies")
     if vacancy_res.status_code != 200:
         st.error("Failed to load jobs")
@@ -239,9 +239,12 @@ if page == "📊 Hiring Pipeline":
     df["Job Name"] = df["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
 
     # =========================
-    # 🔽 JOB FILTER DROPDOWN
+    # 🔽 JOB FILTER DROPDOWN (STATE SAFE)
     # =========================
     st.markdown("### 🔍 Filter by Job")
+
+    if "selected_job" not in st.session_state:
+        st.session_state.selected_job = "All Jobs"
 
     job_options = ["All Jobs"] + sorted(
         df["Job Name"].dropna().unique().tolist()
@@ -249,12 +252,15 @@ if page == "📊 Hiring Pipeline":
 
     selected_job = st.selectbox(
         "Select Job",
-        job_options
+        job_options,
+        index=job_options.index(st.session_state.selected_job)
+        if st.session_state.selected_job in job_options else 0,
+        key="selected_job"
     )
 
     # ---------- Apply filter ----------
-    if selected_job != "All Jobs":
-        df = df[df["Job Name"] == selected_job]
+    if st.session_state.selected_job != "All Jobs":
+        df = df[df["Job Name"] == st.session_state.selected_job]
 
     # =========================
     # DISPLAY TABLE
@@ -284,3 +290,5 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True
     )
+
+
