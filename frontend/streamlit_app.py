@@ -215,30 +215,46 @@ if page == "📊 Hiring Pipeline":
         st.stop()
 
     candidates = res.json().get("data", [])
-
     if not candidates:
         st.info("No candidates found yet.")
         st.stop()
 
     df = pd.DataFrame(candidates)
 
+    # ---------- Fetch vacancies (for Job Name mapping) ----------
+    vacancy_res = api_get("/vacancies")
+    if vacancy_res.status_code != 200:
+        st.error("Failed to load jobs")
+        st.stop()
+
+    vacancies = vacancy_res.json().get("data", [])
+
+    # Build vacancy_id → job_role map
+    vacancy_map = {
+        v["id"]: v["job_role"]
+        for v in vacancies
+    }
+
+    # Add Job Name column
+    df["Job Name"] = df["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
+
     # =========================
     # 🔽 JOB FILTER DROPDOWN
     # =========================
     st.markdown("### 🔍 Filter by Job")
 
-    vacancy_options = ["All Jobs"] + sorted(
-        df["vacancy_id"].dropna().unique().tolist()
+    job_options = ["All Jobs"] + sorted(
+        df["Job Name"].dropna().unique().tolist()
     )
 
-    selected_vacancy = st.selectbox(
+    selected_job = st.selectbox(
         "Select Job",
-        vacancy_options
+        job_options
     )
 
     # ---------- Apply filter ----------
-    if selected_vacancy != "All Jobs":
-        df = df[df["vacancy_id"] == selected_vacancy]
+    if selected_job != "All Jobs":
+        df = df[df["Job Name"] == selected_job]
 
     # =========================
     # DISPLAY TABLE
@@ -257,11 +273,10 @@ if page == "📊 Hiring Pipeline":
     df["Resume Score"] = df["screening_score"]
 
     display_df = df[
-        ["name", "email", "vacancy_id", "Resume Score", "Stage"]
+        ["name", "email", "Job Name", "Resume Score", "Stage"]
     ].rename(columns={
         "name": "Candidate Name",
-        "email": "Email",
-        "vacancy_id": "Job ID"
+        "email": "Email"
     })
 
     st.dataframe(
@@ -269,6 +284,3 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True
     )
-
-
-
