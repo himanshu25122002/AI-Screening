@@ -197,62 +197,78 @@ if page == "📥 HR Intake":
 # =========================
 if page == "📊 Hiring Pipeline":
 
-    # ---------- Header with Refresh ----------
+    # ---------- Header + Refresh ----------
     col1, col2 = st.columns([8, 1])
     with col1:
         st.title("📊 Hiring Pipeline Dashboard")
     with col2:
         if st.button("🔄 Refresh"):
-            st.session_state["refresh_pipeline"] = True
             st.rerun()
-
-    # ---------- Init refresh flag ----------
-    if "refresh_pipeline" not in st.session_state:
-        st.session_state["refresh_pipeline"] = False
 
     # ---------- Fetch candidates ----------
     with st.spinner("Fetching candidates..."):
         res = api_get("/candidates")
 
-    # Reset flag AFTER reload
-    st.session_state["refresh_pipeline"] = False
-
     if res.status_code != 200:
         st.error("Failed to load candidates")
         st.text(res.text)
-    else:
-        candidates = res.json().get("data", [])
+        st.stop()
 
-        if not candidates:
-            st.info("No candidates found yet.")
-        else:
-            df = pd.DataFrame(candidates)
+    candidates = res.json().get("data", [])
 
-            stage_map = {
-                "new": "📄 Resume Uploaded",
-                "screened": "📊 Resume Screened",
-                "form_sent": "📝 Google Form Sent",
-                "form_completed": "✅ Form Completed",
-                "interviewed": "🎙 AI Interview Done",
-                "recommended": "🏁 Final Interview",
-                "rejected": "❌ Rejected"
-            }
+    if not candidates:
+        st.info("No candidates found yet.")
+        st.stop()
 
-            df["Stage"] = df["status"].map(stage_map)
-            df["Resume Score"] = df["screening_score"]
+    df = pd.DataFrame(candidates)
 
-            display_df = df[
-                ["name", "email", "vacancy_id", "Resume Score", "Stage"]
-            ].rename(columns={
-                "name": "Candidate Name",
-                "email": "Email",
-                "vacancy_id": "Job ID"
-            })
+    # =========================
+    # 🔽 JOB FILTER DROPDOWN
+    # =========================
+    st.markdown("### 🔍 Filter by Job")
 
-            st.dataframe(
-                display_df,
-                use_container_width=True,
-                hide_index=True
-            )
+    vacancy_options = ["All Jobs"] + sorted(
+        df["vacancy_id"].dropna().unique().tolist()
+    )
+
+    selected_vacancy = st.selectbox(
+        "Select Job",
+        vacancy_options
+    )
+
+    # ---------- Apply filter ----------
+    if selected_vacancy != "All Jobs":
+        df = df[df["vacancy_id"] == selected_vacancy]
+
+    # =========================
+    # DISPLAY TABLE
+    # =========================
+    stage_map = {
+        "new": "📄 Resume Uploaded",
+        "screened": "📊 Resume Screened",
+        "form_sent": "📝 Google Form Sent",
+        "form_completed": "✅ Form Completed",
+        "interviewed": "🎙 AI Interview Done",
+        "recommended": "🏁 Final Interview",
+        "rejected": "❌ Rejected"
+    }
+
+    df["Stage"] = df["status"].map(stage_map)
+    df["Resume Score"] = df["screening_score"]
+
+    display_df = df[
+        ["name", "email", "vacancy_id", "Resume Score", "Stage"]
+    ].rename(columns={
+        "name": "Candidate Name",
+        "email": "Email",
+        "vacancy_id": "Job ID"
+    })
+
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
 
 
