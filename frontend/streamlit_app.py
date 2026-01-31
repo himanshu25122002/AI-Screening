@@ -201,13 +201,23 @@ if page == "📊 Hiring Pipeline":
     col1, col2 = st.columns([8, 1])
     with col1:
         st.title("📊 Hiring Pipeline Dashboard")
+
     with col2:
         if st.button("🔄 Refresh"):
-            st.rerun()
+            st.session_state.force_refresh = True
+
+    # ---------- Initialize state ----------
+    if "selected_job" not in st.session_state:
+        st.session_state.selected_job = "All Jobs"
+
+    if "force_refresh" not in st.session_state:
+        st.session_state.force_refresh = False
 
     # ---------- Fetch candidates ----------
     with st.spinner("Fetching candidates..."):
         res = api_get("/candidates")
+
+    st.session_state.force_refresh = False
 
     if res.status_code != 200:
         st.error("Failed to load candidates")
@@ -221,7 +231,7 @@ if page == "📊 Hiring Pipeline":
 
     df = pd.DataFrame(candidates)
 
-    # ---------- Fetch vacancies (Job Name mapping) ----------
+    # ---------- Fetch vacancies ----------
     vacancy_res = api_get("/vacancies")
     if vacancy_res.status_code != 200:
         st.error("Failed to load jobs")
@@ -229,33 +239,21 @@ if page == "📊 Hiring Pipeline":
 
     vacancies = vacancy_res.json().get("data", [])
 
-    # Build vacancy_id → job_role map
-    vacancy_map = {
-        v["id"]: v["job_role"]
-        for v in vacancies
-    }
-
-    # Add Job Name column
+    vacancy_map = {v["id"]: v["job_role"] for v in vacancies}
     df["Job Name"] = df["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
 
     # =========================
-    # 🔽 JOB FILTER DROPDOWN (STATE SAFE)
+    # 🔽 JOB FILTER DROPDOWN
     # =========================
     st.markdown("### 🔍 Filter by Job")
 
-    if "selected_job" not in st.session_state:
-        st.session_state.selected_job = "All Jobs"
+    job_options = ["All Jobs"] + sorted(df["Job Name"].unique().tolist())
 
-    job_options = ["All Jobs"] + sorted(
-        df["Job Name"].dropna().unique().tolist()
-    )
-
-    selected_job = st.selectbox(
+    st.session_state.selected_job = st.selectbox(
         "Select Job",
         job_options,
         index=job_options.index(st.session_state.selected_job)
-        if st.session_state.selected_job in job_options else 0,
-        key="selected_job"
+        if st.session_state.selected_job in job_options else 0
     )
 
     # ---------- Apply filter ----------
@@ -290,5 +288,7 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True
     )
+
+
 
 
