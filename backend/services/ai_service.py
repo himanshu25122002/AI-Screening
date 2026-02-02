@@ -5,6 +5,7 @@ import re
 from backend.config import config
 from backend.database import supabase
 from backend.services.email_service import email_service
+from backend.services.resume_parser import ResumeParser
 
 from openai import OpenAI
 
@@ -41,31 +42,6 @@ class AIService:
             print("❌ OPENAI ERROR:", e)
             raise
 
-    
-    def _normalize_email_context(self, text: str) -> str:
-   
-
-        if not text:
-            return ""
-
-   
-        text = re.sub(r"\s+@", "@", text)
-
-   
-        text = re.sub(r"@\s+", "@", text)
-
-
-        text = re.sub(r"\s+\.", ".", text)
-
-   
-        text = re.sub(r"\.\s+", ".", text)
-        text = re.sub(
-            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-            r'\1\2',
-            text
-        )
-
-        return text
 
 
     def extract_email_regex(self, text: str) -> str | None:
@@ -159,10 +135,6 @@ RESUME TEXT
 
   
         if email:
-            username = email.split("@")[0]
-
-            if len(username) < 5 or username.isalpha():
-                return self.extract_email_ai(normalized_text)
 
             return email
 
@@ -284,9 +256,13 @@ RESUME TEXT
 
 
         resume_text = candidate_data.get("resume_text", "")
-        current_email = candidate_data.get("email", "")
 
-        extracted_email = self.extract_email(resume_text)
+        parser = ResumeParser()
+        basic_info = parser.extract_basic_info(resume_text)
+
+        extracted_email = basic_info.get("email")
+        extracted_name = basic_info.get("name")
+
 
         if extracted_email and extracted_email != current_email:
             print("✅ Updating candidate email:", extracted_email)
@@ -464,6 +440,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
