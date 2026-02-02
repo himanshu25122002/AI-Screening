@@ -96,11 +96,15 @@ async def create_candidate(
 
         # ---------- Parse resume ----------
         if resume.filename.endswith(".pdf"):
-            resume_text = ResumeParser.parse_pdf(resume_content)
+            raw_resume_text = ResumeParser.parse_pdf(resume_content)
         else:
-            resume_text = ResumeParser.parse_text(resume_content)
+            raw_resume_text = ResumeParser.parse_text(resume_content)
+
+
+        resume_text = ResumeParser._normalize_email_context(raw_resume_text)
 
         basic_info = ResumeParser.extract_basic_info(resume_text)
+
 
 
         final_name = name or basic_info.get("name") or "Candidate"
@@ -511,6 +515,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
