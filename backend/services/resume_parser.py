@@ -66,7 +66,29 @@ class ResumeParser:
             print(f"❌ Error parsing text file: {e}")
             return ""
 
-    @staticmethod
+
+
+    def _normalize_email_context(self, text: str) -> str:
+        if not text:
+            return ""
+
+   
+        text = re.sub(r"\s+@", "@", text)
+        text = re.sub(r"@\s+", "@", text)
+        text = re.sub(r"\s+\.", ".", text)
+        text = re.sub(r"\.\s+", ".", text)
+
+    
+        text = re.sub(
+            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+            r'\1\2',
+            text
+        )
+
+        return text
+
+
+    
     def extract_basic_info(resume_text: str) -> Dict[str, str]:
         """
         VERY conservative extraction.
@@ -80,12 +102,23 @@ class ResumeParser:
             "phone": ""
         }
 
+
+        
         if not resume_text or len(resume_text.strip()) < 30:
             # 🔥 Absolute fallback
             info["email"] = ResumeParser._generate_fallback_email()
             info["name"] = ""
             return info
+            
+        normalized_text = self._normalize_email_context(resume_text)
 
+        email_match = re.search(
+            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+            normalized_text
+        )
+        if email_match:
+            info["email"] = email_match.group(0)
+            
         lines = resume_text.split("\n")
 
 
@@ -138,4 +171,5 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
