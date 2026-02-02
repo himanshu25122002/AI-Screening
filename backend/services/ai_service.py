@@ -42,32 +42,43 @@ class AIService:
             raise
 
     
+   def _normalize_email_context(self, text: str) -> str:
    
+
+        if not text:
+            return ""
+
+   
+        text = re.sub(r"\s+@", "@", text)
+
+   
+        text = re.sub(r"@\s+", "@", text)
+
+
+        text = re.sub(r"\s+\.", ".", text)
+
+   
+        text = re.sub(r"\.\s+", ".", text)
+        text = re.sub(
+            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+            r'\1\2',
+            text
+        )
+
+        return text
+
 
     def extract_email_regex(self, text: str) -> str | None:
         if not text:
             return None
 
-    # 🔧 NORMALIZE COMMON OCR / PDF ISSUES
-        normalized = text
-
-    # Fix cases like: "sameer a.mishrikotkar@gmail.com"
-        normalized = re.sub(
-            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-            r'\1\2',
-            normalized
-        )
-
-    # Remove spaces around @ and .
-        normalized = re.sub(r'\s*@\s*', '@', normalized)
-        normalized = re.sub(r'\s*\.\s*', '.', normalized)
-
         matches = re.findall(
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            normalized
+            text
         )
 
         return matches[0] if matches else None
+
 
 
 
@@ -137,10 +148,27 @@ RESUME TEXT
             return None
 
     def extract_email(self, resume_text: str) -> str | None:
-       email = self.extract_email_regex(resume_text)
-       if email:
-           return email
-       return self.extract_email_ai(resume_text)
+        if not resume_text:
+            return None
+
+ 
+        normalized_text = self._normalize_email_context(resume_text)
+
+   
+        email = self.extract_email_regex(normalized_text)
+
+  
+        if email:
+            username = email.split("@")[0]
+
+            if len(username) < 5 or username.isalpha():
+                return self.extract_email_ai(normalized_text)
+
+            return email
+
+   
+        return self.extract_email_ai(normalized_text)
+
 
     def extract_name_regex(self, text: str) -> str | None:
         if not text:
@@ -260,7 +288,7 @@ RESUME TEXT
 
         extracted_email = self.extract_email(resume_text)
 
-        if extracted_email and current_email.endswith("@resume.local"):
+        if extracted_email and extracted_email != current_email:
             print("✅ Updating candidate email:", extracted_email)
 
             supabase.table("candidates").update({
@@ -436,6 +464,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
