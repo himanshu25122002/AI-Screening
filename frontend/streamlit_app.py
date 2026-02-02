@@ -268,10 +268,13 @@ if page == "📊 Hiring Pipeline":
         "screened": "📊 Resume Screened",
         "form_sent": "📝 Google Form Sent",
         "form_completed": "✅ Form Completed",
-        "interviewed": "🎙 AI Interview Done",
+        "interview_sent": "🎤 AI Interview Link Sent",
+        "interview_started": "🎙 AI Interview Started",
+        "interview_completed": "🎙 AI Interview Done",
         "recommended": "🏁 Final Interview",
         "rejected": "❌ Rejected"
     }
+
 
     df["Stage"] = df["status"].map(stage_map)
     df["Resume Score"] = df["screening_score"]
@@ -288,6 +291,7 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
