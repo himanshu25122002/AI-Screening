@@ -48,12 +48,27 @@ class AIService:
         if not text:
             return None
 
+    # 🔧 NORMALIZE COMMON OCR / PDF ISSUES
+        normalized = text
+
+    # Fix cases like: "sameer a.mishrikotkar@gmail.com"
+        normalized = re.sub(
+            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+            r'\1\2',
+            normalized
+        )
+
+    # Remove spaces around @ and .
+        normalized = re.sub(r'\s*@\s*', '@', normalized)
+        normalized = re.sub(r'\s*\.\s*', '.', normalized)
+
         matches = re.findall(
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            text
+            normalized
         )
 
         return matches[0] if matches else None
+
 
 
     def extract_email_ai(self, resume_text: str) -> str | None:
@@ -64,6 +79,10 @@ class AIService:
 
         if not resume_text or len(resume_text.strip()) < 30:
              return None
+
+        cleaned_text = resume_text
+        cleaned_text = re.sub(r'\s*@\s*', '@', cleaned_text)
+        cleaned_text = re.sub(r'\s*\.\s*', '.', cleaned_text)
 
         prompt = f"""
 You are an automated resume parsing system used by enterprise ATS platforms.
@@ -99,7 +118,7 @@ OUTPUT RULES (CRITICAL)
 RESUME TEXT
 ━━━━━━━━━━━━━━━━━━━━━━
 
-{resume_text}
+{cleaned_text}
 
         """
 
@@ -417,6 +436,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
