@@ -94,81 +94,58 @@ async def create_candidate(
     try:
         resume_content = await resume.read()
 
-        # =========================
-        # PARSE RESUME (OCR / TEXT)
-        # =========================
-        if resume.filename.lower().endswith(".pdf"):
+        # ---------- Parse resume ----------
+        if resume.filename.endswith(".pdf"):
             resume_text = resume_parser.parse_pdf(resume_content)
         else:
             resume_text = resume_parser.parse_text(resume_content)
 
-        # =========================
-        # BASIC INFO (NORMALIZED EMAIL)
-        # =========================
         basic_info = resume_parser.extract_basic_info(resume_text)
 
-        final_name = (
-            name
-            or basic_info.get("name")
-            or "Candidate"
-        )
+        final_name = name or basic_info.get("name") or "Candidate"
 
-        final_email = (
-            email
-            or basic_info.get("email")
-        )
+        extracted_email = email or basic_info.get("email")
 
-        # Absolute fallback (should rarely happen)
-        if not final_email:
-            final_email = f"candidate_{uuid4().hex}@resume.local"
+        # ---------- AI fallback ONLY if regex failed ----------
+        if not extracted_email:
+            extracted_email = ai_service.extract_email_from_resume(resume_text)
 
-        final_phone = (
-            phone
-            or basic_info.get("phone")
-        )
+        if not extracted_email:
+            raise HTTPException(
+                status_code=400,
+                detail="Email could not be extracted from resume"
+            )
 
-        # =========================
-        # ❌ PREVENT DUPLICATE FOR SAME JOB
-        # =========================
+        extracted_email = extracted_email.lower()
+
+        # ---------- DUPLICATE CHECK (per job) ----------
         existing = (
             supabase.table("candidates")
             .select("id")
-            .eq("email", final_email)
             .eq("vacancy_id", vacancy_id)
+            .eq("email", extracted_email)
             .execute()
         )
 
         if existing.data:
-            raise HTTPException(
-                status_code=409,
-                detail="Candidate already exists for this job role"
-            )
+            return {
+                "success": False,
+                "message": "Candidate already exists for this job"
+            }
 
-        # =========================
-        # INSERT CANDIDATE
-        # =========================
         candidate_data = {
             "vacancy_id": vacancy_id,
             "name": final_name,
-            "email": final_email,
-            "phone": final_phone,
+            "email": extracted_email,
+            "phone": phone or basic_info.get("phone"),
             "resume_text": resume_text,
             "resume_url": f"uploads/{resume.filename}",
             "status": "new"
         }
 
-        result = (
-            supabase
-            .table("candidates")
-            .insert(candidate_data)
-            .execute()
-        )
-
+        result = supabase.table("candidates").insert(candidate_data).execute()
         candidate = result.data[0]
 
-        # =========================
-        # 🔥 AUTO START SCREENING
-        # =========================
         background_tasks.add_task(
             ai_service.screen_resume,
             candidate["id"],
@@ -180,7 +157,8 @@ async def create_candidate(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print("❌ Candidate creation failed:", str(e))
+        raise HTTPException(status_code=500, detail="Candidate processing failed")
 
 
 
@@ -532,6 +510,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
