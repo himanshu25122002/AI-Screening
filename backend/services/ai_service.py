@@ -127,7 +127,7 @@ RESUME TEXT
 
         email = self.extract_email_regex(resume_text)
             if email:
-            return email
+                return email
         return self.extract_email_ai(resume_text)
 
 
@@ -430,6 +430,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
