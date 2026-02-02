@@ -42,7 +42,7 @@ class AIService:
             raise
 
     
-   def _normalize_email_context(self, text: str) -> str:
+    def _normalize_email_context(self, text: str) -> str:
    
 
         if not text:
@@ -464,6 +464,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
