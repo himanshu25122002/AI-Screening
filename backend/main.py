@@ -95,48 +95,79 @@ async def create_candidate(
         resume_content = await resume.read()
 
         # =========================
-        # PARSE RESUME
+        # PARSE RESUME (OCR / TEXT)
         # =========================
-        if resume.filename.endswith(".pdf"):
+        if resume.filename.lower().endswith(".pdf"):
             resume_text = resume_parser.parse_pdf(resume_content)
         else:
             resume_text = resume_parser.parse_text(resume_content)
 
+        # =========================
+        # BASIC INFO (NORMALIZED EMAIL)
+        # =========================
         basic_info = resume_parser.extract_basic_info(resume_text)
 
+        final_name = (
+            name
+            or basic_info.get("name")
+            or "Candidate"
+        )
+
+        final_email = (
+            email
+            or basic_info.get("email")
+        )
+
+        # Absolute fallback (should rarely happen)
+        if not final_email:
+            final_email = f"candidate_{uuid4().hex}@resume.local"
+
+        final_phone = (
+            phone
+            or basic_info.get("phone")
+        )
+
         # =========================
-        # FALLBACK LOGIC (CRITICAL)
+        # ❌ PREVENT DUPLICATE FOR SAME JOB
         # =========================
-        final_name = name or basic_info.get("name") or "Candidate"
-        
-        extracted_email = email or basic_info.get("email")
-        if not extracted_email:
-            extracted_email = ai_service.extract_email_from_resume(resume_text)
+        existing = (
+            supabase.table("candidates")
+            .select("id")
+            .eq("email", final_email)
+            .eq("vacancy_id", vacancy_id)
+            .execute()
+        )
 
-        # Supabase requires UNIQUE + NOT NULL email
-        if not extracted_email:
-            extracted_email = f"candidate_{uuid4().hex}@placeholder.local"
+        if existing.data:
+            raise HTTPException(
+                status_code=409,
+                detail="Candidate already exists for this job role"
+            )
 
-        final_phone = phone or basic_info.get("phone")
-
+        # =========================
+        # INSERT CANDIDATE
+        # =========================
         candidate_data = {
             "vacancy_id": vacancy_id,
             "name": final_name,
-            "email": extracted_email,
+            "email": final_email,
             "phone": final_phone,
             "resume_text": resume_text,
             "resume_url": f"uploads/{resume.filename}",
             "status": "new"
         }
 
-        # =========================
-        # INSERT CANDIDATE
-        # =========================
-        result = supabase.table("candidates").insert(candidate_data).execute()
+        result = (
+            supabase
+            .table("candidates")
+            .insert(candidate_data)
+            .execute()
+        )
+
         candidate = result.data[0]
 
         # =========================
-        # 🔥 AUTO START SCREENING (BACKGROUND)
+        # 🔥 AUTO START SCREENING
         # =========================
         background_tasks.add_task(
             ai_service.screen_resume,
@@ -146,16 +177,25 @@ async def create_candidate(
 
         return {"success": True, "data": candidate}
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 
-
 @app.get("/candidates")
-def list_candidates(vacancy_id: Optional[str] = None, status: Optional[str] = None):
+def list_candidates(
+    vacancy_id: Optional[str] = None,
+    status: Optional[str] = None
+):
     try:
-        query = supabase.table("candidates").select("*").order("created_at", desc=True)
+        query = (
+            supabase
+            .table("candidates")
+            .select("*")
+            .order("created_at", desc=True)
+        )
 
         if vacancy_id:
             query = query.eq("vacancy_id", vacancy_id)
@@ -164,43 +204,66 @@ def list_candidates(vacancy_id: Optional[str] = None, status: Optional[str] = No
 
         result = query.execute()
         return {"success": True, "data": result.data}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/candidates/{candidate_id}")
 def get_candidate(candidate_id: str):
     try:
-        candidate = supabase.table("candidates").select("*").eq("id", candidate_id).single().execute()
-
-        form_data = supabase.table("candidate_forms")\
-            .select("*")\
-            .eq("candidate_id", candidate_id)\
-            .maybeSingle()\
+        candidate_res = (
+            supabase
+            .table("candidates")
+            .select("*")
+            .eq("id", candidate_id)
+            .single()
             .execute()
+        )
 
-        interview_data = supabase.table("ai_interviews")\
-            .select("*")\
-            .eq("candidate_id", candidate_id)\
-            .maybeSingle()\
+        if not candidate_res.data:
+            raise HTTPException(status_code=404, detail="Candidate not found")
+
+        form_data = (
+            supabase
+            .table("candidate_forms")
+            .select("*")
+            .eq("candidate_id", candidate_id)
+            .maybeSingle()
             .execute()
+        )
+
+        interview_data = (
+            supabase
+            .table("ai_interviews")
+            .select("*")
+            .eq("candidate_id", candidate_id)
+            .maybeSingle()
+            .execute()
+        )
 
         return {
             "success": True,
             "data": {
-                "candidate": candidate.data,
+                "candidate": candidate_res.data,
                 "form_data": form_data.data,
                 "interview_data": interview_data.data
             }
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/screening/resume")
 def screen_resume(request: ResumeScreeningRequest):
-    # 🔍 Fetch candidate + vacancy
+
     candidate_res = (
-        supabase.table("candidates")
-        .select("id, vacancy_id")
+        supabase
+        .table("candidates")
+        .select("id, vacancy_id, status")
         .eq("id", request.candidate_id)
         .single()
         .execute()
@@ -209,12 +272,16 @@ def screen_resume(request: ResumeScreeningRequest):
     if not candidate_res.data:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
+    if candidate_res.data["status"] != "new":
+        raise HTTPException(
+            status_code=409,
+            detail="Candidate already screened or in progress"
+        )
+
     vacancy_id = candidate_res.data["vacancy_id"]
 
-    # 🔥 HARD LOG (IMPORTANT)
     print("🔥 MANUAL SCREENING STARTED:", request.candidate_id)
 
-    # 🚀 Run AI screening (NO silent try/except)
     result = ai_service.screen_resume(
         request.candidate_id,
         vacancy_id
@@ -226,13 +293,16 @@ def screen_resume(request: ResumeScreeningRequest):
     }
 
 
+
 # =========================
 # BATCH RESUME SCREENING
 # =========================
 @app.post("/screening/batch")
 def batch_screen_resumes(vacancy_id: str):
+
     candidates_res = (
-        supabase.table("candidates")
+        supabase
+        .table("candidates")
         .select("id")
         .eq("vacancy_id", vacancy_id)
         .eq("status", "new")
@@ -254,13 +324,14 @@ def batch_screen_resumes(vacancy_id: str):
 
         try:
             result = ai_service.screen_resume(candidate_id, vacancy_id)
+
             results.append({
                 "candidate_id": candidate_id,
                 "success": True,
                 "data": result
             })
+
         except Exception as e:
-            # ❗ LOG REAL ERROR
             print("❌ SCREENING FAILED:", candidate_id, str(e))
 
             results.append({
@@ -271,8 +342,10 @@ def batch_screen_resumes(vacancy_id: str):
 
     return {
         "success": True,
+        "count": len(results),
         "results": results
     }
+
 
 @app.post("/interviews/start")
 def start_interview(request: AIInterviewRequest):
@@ -459,6 +532,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
