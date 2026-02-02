@@ -5,7 +5,7 @@ import re
 from backend.config import config
 from backend.database import supabase
 from backend.services.email_service import email_service
-from backend.services.resume_parser import ResumeParser
+
 
 from openai import OpenAI
 
@@ -67,9 +67,7 @@ class AIService:
         if not resume_text or len(resume_text.strip()) < 30:
              return None
 
-        cleaned_text = resume_text
-        cleaned_text = re.sub(r'\s*@\s*', '@', cleaned_text)
-        cleaned_text = re.sub(r'\s*\.\s*', '.', cleaned_text)
+        
 
         prompt = f"""
 You are an automated resume parsing system used by enterprise ATS platforms.
@@ -105,7 +103,7 @@ OUTPUT RULES (CRITICAL)
 RESUME TEXT
 ━━━━━━━━━━━━━━━━━━━━━━
 
-{cleaned_text}
+{resume_text}
 
         """
 
@@ -127,19 +125,11 @@ RESUME TEXT
         if not resume_text:
             return None
 
- 
-        normalized_text = self._normalize_email_context(resume_text)
-
-   
-        email = self.extract_email_regex(normalized_text)
-
-  
-        if email:
-
+        email = self.extract_email_regex(resume_text)
+            if email:
             return email
+        return self.extract_email_ai(resume_text)
 
-   
-        return self.extract_email_ai(normalized_text)
 
 
     def extract_name_regex(self, text: str) -> str | None:
@@ -440,6 +430,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
