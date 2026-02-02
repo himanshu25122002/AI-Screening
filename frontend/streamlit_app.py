@@ -177,7 +177,7 @@ if page == "📥 HR Intake":
                         files={"resume": resume}
                     )
 
-                    if res.status_code == 200:
+                    if res.status_code == 200 and res.json().get("success"):
                         success_count += 1
                     else:
                         failed_files.append(resume.name)
@@ -288,6 +288,7 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
