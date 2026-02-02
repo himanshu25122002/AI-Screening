@@ -246,15 +246,11 @@ RESUME TEXT
 
 
         resume_text = candidate_data.get("resume_text", "")
+        current_email = candidate_data.get("email", "")
 
-        parser = ResumeParser()
-        basic_info = parser.extract_basic_info(resume_text)
+        extracted_email = self.extract_email(resume_text)
 
-        extracted_email = basic_info.get("email")
-        extracted_name = basic_info.get("name")
-
-
-        if extracted_email and extracted_email != current_email:
+        if extracted_email != current_email:
             print("✅ Updating candidate email:", extracted_email)
 
             supabase.table("candidates").update({
@@ -430,6 +426,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
