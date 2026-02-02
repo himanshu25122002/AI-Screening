@@ -67,8 +67,8 @@ class ResumeParser:
             return ""
 
 
-
-    def _normalize_email_context(self, text: str) -> str:
+    @staticmethod
+    def _normalize_email_context(text: str) -> str:
         if not text:
             return ""
 
@@ -88,7 +88,7 @@ class ResumeParser:
         return text
 
 
-    
+    @staticmethod
     def extract_basic_info(resume_text: str) -> Dict[str, str]:
         """
         VERY conservative extraction.
@@ -110,7 +110,7 @@ class ResumeParser:
             info["name"] = ""
             return info
             
-        normalized_text = self._normalize_email_context(resume_text)
+        normalized_text = ResumeParser._normalize_email_context(resume_text)
 
         email_match = re.search(
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
@@ -171,5 +171,6 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
