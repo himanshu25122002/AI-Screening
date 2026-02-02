@@ -88,15 +88,6 @@ class ResumeParser:
 
         lines = resume_text.split("\n")
 
-        # =========================
-        # 📧 EMAIL (full scan)
-        # =========================
-        email_match = re.search(
-            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            resume_text
-        )
-        if email_match:
-            info["email"] = email_match.group(0)
 
         # =========================
         # 📞 PHONE
@@ -134,8 +125,7 @@ class ResumeParser:
         # =========================
         # 🚨 GUARANTEES
         # =========================
-        if not info["email"]:
-            info["email"] = ResumeParser._generate_fallback_email()
+       
 
         if not info["name"]:
             info["name"] = ""
@@ -148,3 +138,4 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
