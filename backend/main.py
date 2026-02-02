@@ -14,7 +14,7 @@ from backend.database import supabase
 from backend.services.ai_service import ai_service
 from backend.services.email_service import email_service
 from backend.services.google_sheets_service import google_sheets_service
-from backend.services.resume_parser import resume_parser
+from services.resume_parser import ResumeParser
 from backend.config import config
 from backend.ai_interview import router as interview_router
 from backend.services.candidate_form import router as candidate_form_router
@@ -100,7 +100,8 @@ async def create_candidate(
         else:
             resume_text = resume_parser.parse_text(resume_content)
 
-        basic_info = resume_parser.extract_basic_info(resume_text)
+        basic_info = ResumeParser.extract_basic_info(resume_text)
+
 
         final_name = name or basic_info.get("name") or "Candidate"
 
@@ -510,6 +511,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
