@@ -85,8 +85,10 @@ st.sidebar.title("🧭 Navigation")
 
 page = st.sidebar.radio(
     "Select Page",
-    ["📥 HR Intake", "📊 Hiring Pipeline"],
-    index=0 if st.session_state.page == "📥 HR Intake" else 1
+    ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms"],
+    index=["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms"].index(st.session_state.page)
+    if st.session_state.page in ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms"]
+    else 0
 )
 
 st.session_state.page = page
@@ -291,6 +293,116 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True
     )
+
+# =========================
+# PAGE 3 — CANDIDATE FORMS
+# =========================
+if page == "📝 Candidate Forms":
+
+    # ---------- Header + Refresh ----------
+    col1, col2 = st.columns([8, 1])
+    with col1:
+        st.title("📝 Candidate Forms Dashboard")
+    with col2:
+        if st.button("🔄 Refresh"):
+            st.session_state.force_refresh = True
+
+    # ---------- Init session state ----------
+    if "selected_form_job" not in st.session_state:
+        st.session_state.selected_form_job = "All Jobs"
+
+    # ---------- Fetch data ----------
+    with st.spinner("Fetching candidate forms..."):
+        candidates_res = api_get("/candidates")
+        vacancies_res = api_get("/vacancies")
+
+    if candidates_res.status_code != 200 or vacancies_res.status_code != 200:
+        st.error("Failed to load data")
+        st.stop()
+
+    candidates = candidates_res.json().get("data", [])
+    vacancies = vacancies_res.json().get("data", [])
+
+    if not candidates:
+        st.info("No candidates found.")
+        st.stop()
+
+    # ---------- Build maps ----------
+    vacancy_map = {v["id"]: v["job_role"] for v in vacancies}
+
+    # ---------- Fetch candidate_forms directly ----------
+    forms_res = requests.get(f"{BACKEND_URL}/candidate-form/all")
+    if forms_res.status_code != 200:
+        st.error("Failed to load candidate forms")
+        st.stop()
+
+    forms = forms_res.json().get("data", [])
+
+    if not forms:
+        st.info("No forms submitted yet.")
+        st.stop()
+
+    df_candidates = pd.DataFrame(candidates)
+    df_forms = pd.DataFrame(forms)
+
+    # ---------- Merge ----------
+    df = df_forms.merge(
+        df_candidates,
+        left_on="candidate_id",
+        right_on="id",
+        how="left",
+        suffixes=("_form", "_candidate")
+    )
+
+    df["Job Name"] = df["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
+
+    # =========================
+    # 🔽 JOB FILTER
+    # =========================
+    st.markdown("### 🔍 Filter by Job")
+
+    job_options = ["All Jobs"] + sorted(df["Job Name"].unique().tolist())
+
+    st.session_state.selected_form_job = st.selectbox(
+        "Select Job",
+        job_options,
+        index=job_options.index(st.session_state.selected_form_job)
+        if st.session_state.selected_form_job in job_options else 0
+    )
+
+    if st.session_state.selected_form_job != "All Jobs":
+        df = df[df["Job Name"] == st.session_state.selected_form_job]
+
+    # =========================
+    # DISPLAY TABLE
+    # =========================
+    display_df = df[[
+        "name",
+        "email",
+        "Job Name",
+        "availability",
+        "salary_expectations",
+        "portfolio_links",
+        "skill_self_assessment",
+        "additional_info",
+        "form_submitted_at"
+    ]].rename(columns={
+        "name": "Candidate Name",
+        "email": "Email",
+        "availability": "Availability",
+        "salary_expectations": "Salary",
+        "portfolio_links": "Portfolio Links",
+        "skill_self_assessment": "Skill Self Assessment",
+        "additional_info": "Additional Info",
+        "form_submitted_at": "Submitted At"
+    })
+
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
 
 
 
