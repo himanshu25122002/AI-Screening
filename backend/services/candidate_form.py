@@ -112,3 +112,13 @@ def candidate_form_status(candidate_id: str):
         ]
     }
 
+@router.get("/candidate-form/all")
+def list_all_candidate_forms():
+    result = (
+        supabase
+        .table("candidate_forms")
+        .select("*")
+        .order("form_submitted_at", desc=True)
+        .execute()
+    )
+    return {"success": True, "data": result.data}
