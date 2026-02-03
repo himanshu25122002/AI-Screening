@@ -108,7 +108,7 @@ if page == "📥 HR Intake":
 
         skills = st.text_area(
             "Required Skills * (comma-separated)",
-            placeholder="Python, FastAPI, SQL, AWS"
+            placeholder="Python, FastAPI, SQL, AWS, etc..."
         )
 
         experience = st.selectbox(
@@ -118,7 +118,7 @@ if page == "📥 HR Intake":
 
         culture = st.text_area(
             "Culture Traits *",
-            value="Collaborative, Growth-minded, Innovative"
+            placeholder="Collaborative, Growth-minded, Innovative, etc...."
         )
 
         job_description = st.text_area(
@@ -402,6 +402,7 @@ if page == "📝 Candidate Forms":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
