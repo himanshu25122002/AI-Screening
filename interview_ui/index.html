@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+
+<!-- ================== MediaPipe (ML Anti-Cheat) ================== -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -7,7 +13,8 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 🔒 FULLSCREEN + ANTI ZOOM LOCK -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
   <style>
     :root {
@@ -59,20 +66,6 @@
       overflow: hidden;
     }
 
-    .panel::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 18px;
-      pointer-events: none;
-      background: linear-gradient(
-        120deg,
-        transparent 20%,
-        rgba(255,255,255,0.08),
-        transparent 80%
-      );
-    }
-
     h1 {
       font-size: 28px;
       font-weight: 800;
@@ -91,7 +84,6 @@
       border-radius: 14px;
       padding: 22px;
       font-size: 20px;
-      line-height: 1.4;
       min-height: 110px;
       display: flex;
       align-items: center;
@@ -112,10 +104,6 @@
       min-height: 90px;
     }
 
-    textarea::placeholder {
-      color: #6f78a5;
-    }
-
     /* ===== CONTROLS ===== */
     .controls {
       display: flex;
@@ -131,7 +119,6 @@
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.25s ease;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -140,24 +127,13 @@
     .mic {
       background: linear-gradient(135deg, #7c9cff, #5b7cff);
       color: #fff;
-      box-shadow: 0 10px 30px rgba(124,156,255,0.4);
-    }
-
-    .mic:hover {
-      transform: translateY(-2px);
     }
 
     .submit {
       background: linear-gradient(135deg, #00e5a8, #00c896);
       color: #00261b;
-      box-shadow: 0 10px 30px rgba(0,229,168,0.4);
     }
 
-    .submit:hover {
-      transform: translateY(-2px);
-    }
-
-    /* ===== TIMER ===== */
     .timer {
       margin-left: auto;
       font-weight: 600;
@@ -182,7 +158,7 @@
       width: 100%;
       border-radius: 14px;
       background: #000;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 2px solid #4CAF50;
     }
 
     .camera-label {
@@ -190,22 +166,22 @@
       color: var(--muted);
     }
 
-    /* ===== AI STATES ===== */
-    body[data-state="thinking"] .question-box {
-      opacity: 0.7;
+    /* ===== ANTI-CHEAT OVERLAY ===== */
+    #antiCheatWarning {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 10000;
+      color: white;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
     }
 
-    body[data-state="listening"] .mic {
-      background: linear-gradient(135deg, #ff5c5c, #ff2f2f);
-      box-shadow: 0 0 25px rgba(255,92,92,0.6);
-    }
-
-    body[data-state="asking"] .question-box {
-      box-shadow: 0 0 35px rgba(124,156,255,0.45);
-    }
-
-    body[data-state="completed"] .panel {
-      border: 2px solid var(--success);
+    #antiCheatWarning h1 {
+      color: var(--danger);
     }
 
     @media (max-width: 900px) {
@@ -217,6 +193,17 @@
 </head>
 
 <body data-state="idle">
+
+  <!-- 🚨 ANTI-CHEAT WARNING -->
+  <div id="antiCheatWarning">
+    <h1>⚠️ Anti-Cheat Warning</h1>
+    <p id="antiCheatMessage">
+      Fullscreen or camera violation detected.
+    </p>
+    <p style="opacity:0.7">
+      Returning to fullscreen is mandatory.
+    </p>
+  </div>
 
   <div class="container">
 
@@ -247,7 +234,7 @@
     <div class="camera-panel">
       <video id="camera" autoplay muted playsinline></video>
       <div class="camera-label">
-        Camera is used only for presence monitoring
+        Camera is mandatory for interview monitoring
       </div>
     </div>
 
@@ -255,5 +242,6 @@
 
   <!-- CORE INTERVIEW LOGIC -->
   <script src="interview.js"></script>
+
 </body>
 </html>
