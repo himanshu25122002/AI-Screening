@@ -278,3 +278,92 @@ window.onload = async () => {
   await initCamera();
   fetchQuestion();
 };
+
+/* ================= ML ANTI-CHEAT ================= */
+
+const videoEl = document.getElementById("camera");
+const canvas = document.getElementById("overlay");
+const ctx = canvas.getContext("2d");
+
+let cheatScore = 0;
+const CHEAT_LIMIT = 100;
+
+function flagCheat(reason, weight = 10) {
+  cheatScore += weight;
+  console.warn("🚨 CHEAT:", reason, cheatScore);
+
+  if (cheatScore >= CHEAT_LIMIT) {
+    alert("❌ Interview terminated due to suspicious behavior.");
+    finishInterview(true);
+  }
+}
+
+/* ---------- FACE DETECTION (MULTIPLE PEOPLE) ---------- */
+const faceDetector = new FaceDetection({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
+});
+faceDetector.setOptions({
+  model: "short",
+  minDetectionConfidence: 0.7,
+});
+
+faceDetector.onResults((res) => {
+  if (!res.detections || res.detections.length === 0) {
+    flagCheat("No face detected", 8);
+  } else if (res.detections.length > 1) {
+    flagCheat("Multiple faces detected", 25);
+  }
+});
+
+/* ---------- FACE MESH (EYES + HEAD POSE) ---------- */
+const faceMesh = new FaceMesh({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+});
+
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7,
+});
+
+faceMesh.onResults((res) => {
+  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) {
+    flagCheat("Face lost", 10);
+    return;
+  }
+
+  const lm = res.multiFaceLandmarks[0];
+
+  const leftEye = lm[33];
+  const rightEye = lm[263];
+  const nose = lm[1];
+
+  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+  const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+
+  const dx = Math.abs(nose.x - eyeCenterX);
+  const dy = Math.abs(nose.y - eyeCenterY);
+
+  if (dx > 0.05) flagCheat("Looking sideways", 4);
+  if (dy > 0.05) flagCheat("Looking down/up", 4);
+
+  canvas.width = videoEl.videoWidth;
+  canvas.height = videoEl.videoHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+/* ---------- CAMERA PIPELINE ---------- */
+const mlCamera = new Camera(videoEl, {
+  onFrame: async () => {
+    await faceDetector.send({ image: videoEl });
+    await faceMesh.send({ image: videoEl });
+  },
+  width: 640,
+  height: 480,
+});
+
+mlCamera.start();
+
