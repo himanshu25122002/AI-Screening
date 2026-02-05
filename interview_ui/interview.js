@@ -1,20 +1,29 @@
 /*************************************************
  * GOD-LEVEL AI INTERVIEW ENGINE – interview.js
- * Browser STT + TTS + Camera + AI States
- * NO BACKEND CHANGES REQUIRED
+ * FULLSCREEN + CAMERA + TAB LOCK + STT + TTS
+ * ZERO BACKEND CHANGES
  *************************************************/
 
-const API_BASE = "https://ai-screening-wbb0.onrender.com"; // same backend
+const API_BASE = "https://ai-screening-wbb0.onrender.com";
+
 const params = new URLSearchParams(window.location.search);
 const candidateId = params.get("candidate_id");
+
 let interviewCompleted = false;
+let fullscreenExitCount = 0;
+let tabSwitchCount = 0;
+let cameraFailureCount = 0;
+
+const MAX_FULLSCREEN_EXIT = 3;
+const MAX_TAB_SWITCH = 3;
+const MAX_CAMERA_FAIL = 3;
 
 if (!candidateId) {
   alert("Missing candidate_id");
   throw new Error("candidate_id missing");
 }
 
-/* ---------------- AI STATE MACHINE ---------------- */
+/* ================= AI STATE ================= */
 let aiState = "idle";
 function setState(state) {
   aiState = state;
@@ -22,14 +31,54 @@ function setState(state) {
   console.log("AI STATE →", state);
 }
 
-/* ---------------- DOM ELEMENTS ---------------- */
+/* ================= DOM ================= */
 const questionEl = document.getElementById("question");
 const answerBox = document.getElementById("answerBox");
 const micBtn = document.getElementById("micBtn");
 const submitBtn = document.getElementById("submitBtn");
 const timerEl = document.getElementById("timer");
+const videoEl = document.getElementById("camera");
 
-/* ---------------- TIMER ---------------- */
+/* ================= FULLSCREEN ENFORCEMENT ================= */
+function requestFullscreen() {
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+
+document.addEventListener("fullscreenchange", () => {
+  if (!document.fullscreenElement && !interviewCompleted) {
+    fullscreenExitCount++;
+
+    alert(
+      `⚠️ Fullscreen is mandatory.\nExit ${fullscreenExitCount}/${MAX_FULLSCREEN_EXIT}`
+    );
+
+    if (fullscreenExitCount >= MAX_FULLSCREEN_EXIT) {
+      alert("❌ Interview terminated (fullscreen violation).");
+      finishInterview(true);
+      return;
+    }
+    requestFullscreen();
+  }
+});
+
+/* ================= TAB SWITCH DETECTION ================= */
+window.addEventListener("blur", () => {
+  if (interviewCompleted) return;
+
+  tabSwitchCount++;
+  alert(
+    `⚠️ Tab switching detected.\nWarning ${tabSwitchCount}/${MAX_TAB_SWITCH}`
+  );
+
+  if (tabSwitchCount >= MAX_TAB_SWITCH) {
+    alert("❌ Interview terminated (tab switching).");
+    finishInterview(true);
+  }
+});
+
+/* ================= TIMER ================= */
 const QUESTION_TIME = 60;
 let timerInterval;
 let timeLeft = QUESTION_TIME;
@@ -50,35 +99,32 @@ function startTimer() {
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      submitAnswer(); 
+      if (answerBox.value.trim()) {
+        submitAnswer();
+      } else {
+        fetchQuestion("");
+      }
     }
   }, 1000);
 }
 
-
-/* ---------------- TTS (SPEECH OUTPUT) ---------------- */
+/* ================= TTS ================= */
 function speak(text, onDone) {
   speechSynthesis.cancel();
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.95;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-
-  utterance.onend = () => {
-    if (onDone) onDone();
-  };
-
-  speechSynthesis.speak(utterance);
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.95;
+  u.pitch = 1;
+  u.volume = 1;
+  u.onend = () => onDone && onDone();
+  speechSynthesis.speak(u);
 }
 
-
-/* ---------------- STT (SPEECH INPUT) ---------------- */
+/* ================= STT ================= */
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (!SpeechRecognition) {
-  alert("Speech Recognition not supported in this browser.");
+  alert("Speech recognition not supported.");
 }
 
 const recognition = new SpeechRecognition();
@@ -91,9 +137,8 @@ micBtn.onclick = () => {
   recognition.start();
 };
 
-recognition.onresult = (event) => {
-  const transcript = event.results[0][0].transcript;
-  answerBox.value = transcript;
+recognition.onresult = (e) => {
+  answerBox.value = e.results[0][0].transcript;
 };
 
 recognition.onend = () => {
@@ -101,7 +146,36 @@ recognition.onend = () => {
   answerBox.focus();
 };
 
-/* ---------------- FETCH QUESTION ---------------- */
+/* ================= CAMERA (MANDATORY) ================= */
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false
+    });
+
+    videoEl.srcObject = stream;
+
+    setInterval(() => {
+      if (!videoEl.srcObject || videoEl.readyState !== 4) {
+        cameraFailureCount++;
+
+        if (cameraFailureCount >= MAX_CAMERA_FAIL) {
+          alert("❌ Camera disconnected. Interview terminated.");
+          finishInterview(true);
+        }
+      } else {
+        cameraFailureCount = 0;
+      }
+    }, 3000);
+
+  } catch (e) {
+    alert("❌ Camera access is mandatory.");
+    finishInterview(true);
+  }
+}
+
+/* ================= FETCH QUESTION ================= */
 async function fetchQuestion(answer = null) {
   if (interviewCompleted) return;
 
@@ -111,15 +185,11 @@ async function fetchQuestion(answer = null) {
     const res = await fetch(`${API_BASE}/ai-interview/next`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        candidate_id: candidateId,
-        answer: answer
-      })
+      body: JSON.stringify({ candidate_id: candidateId, answer })
     });
 
     const data = await res.json();
 
-    // ✅ HARD STOP IF COMPLETED
     if (data.completed) {
       interviewCompleted = true;
       clearInterval(timerInterval);
@@ -131,44 +201,38 @@ async function fetchQuestion(answer = null) {
         body: JSON.stringify({ candidate_id: candidateId })
       });
 
-      finishInterview();
+      finishInterview(false);
       return;
     }
 
     showQuestion(data.question);
 
-  } catch (err) {
-    console.error(err);
-    alert("Interview error. Please refresh.");
+  } catch (e) {
+    alert("Interview error. Refresh if needed.");
   }
 }
 
-
-
-/* ---------------- DISPLAY QUESTION ---------------- */
-function showQuestion(question) {
+/* ================= DISPLAY QUESTION ================= */
+function showQuestion(q) {
   if (interviewCompleted) return;
 
-  questionEl.innerText = question;
+  questionEl.innerText = q;
   answerBox.value = "";
+  submitBtn.disabled = false;
+  submitBtn.innerText = "Submit";
+
   setState("asking");
 
-  speak(question, () => {
-    if (!interviewCompleted) {
-      startTimer(); 
-    }
+  speak(q, () => {
+    if (!interviewCompleted) startTimer();
   });
 }
 
-
-
-/* ---------------- SUBMIT ANSWER ---------------- */
+/* ================= SUBMIT ================= */
 submitBtn.onclick = submitAnswer;
 
 function submitAnswer() {
   if (interviewCompleted) return;
-
-  clearInterval(timerInterval);
 
   const answer = answerBox.value.trim();
   if (!answer) {
@@ -176,41 +240,41 @@ function submitAnswer() {
     return;
   }
 
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Submitting…";
+  clearInterval(timerInterval);
+  speechSynthesis.cancel();
+
   fetchQuestion(answer);
 }
 
-
-
-/* ---------------- FINISH ---------------- */
-function finishInterview() {
+/* ================= FINISH ================= */
+function finishInterview(force = false) {
   interviewCompleted = true;
 
   setState("completed");
   clearInterval(timerInterval);
   speechSynthesis.cancel();
 
-  questionEl.innerHTML = "🎉 Interview Completed";
+  questionEl.innerHTML = force
+    ? "❌ Interview Terminated"
+    : "🎉 Interview Completed";
+
   answerBox.style.display = "none";
   micBtn.style.display = "none";
   submitBtn.style.display = "none";
   timerEl.innerText = "";
 
-  speak("Thank you. Your interview is now complete.");
+  speak(
+    force
+      ? "Interview terminated due to policy violation."
+      : "Thank you. Your interview is complete."
+  );
 }
 
-/* ---------------- CAMERA ---------------- */
-async function initCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    const video = document.getElementById("camera");
-    video.srcObject = stream;
-  } catch (e) {
-    console.warn("Camera access denied");
-  }
-}
-
-/* ---------------- INIT ---------------- */
-window.onload = () => {
-  initCamera();
-  fetchQuestion(); // first question
+/* ================= INIT ================= */
+window.onload = async () => {
+  requestFullscreen();
+  await initCamera();
+  fetchQuestion();
 };
