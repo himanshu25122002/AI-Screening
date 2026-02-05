@@ -232,11 +232,33 @@
 
     <!-- RIGHT: CAMERA -->
     <div class="camera-panel">
-      <video id="camera" autoplay muted playsinline></video>
+      <div style="position: relative; width: 100%;">
+        <video
+          id="camera"
+          autoplay
+          muted
+          playsinline
+          style="width:100%; border-radius:14px;"
+        ></video>
+    
+        <canvas
+          id="overlay"
+          style="
+            position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            pointer-events:none;
+          "
+        ></canvas>
+      </div>
+
       <div class="camera-label">
-        Camera is mandatory for interview monitoring
+        Camera is mandatory. Anti-cheat monitoring enabled.
       </div>
     </div>
+
 
   </div>
 
