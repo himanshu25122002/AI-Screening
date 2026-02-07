@@ -126,6 +126,10 @@ Candidate Resume:
 INTERVIEW STATE
 ━━━━━━━━━━━━━━━━━━━━━━
 Current Question Number: {question_count + 1}
+IMPORTANT:
+You MUST include the question number in the final question text.
+Format STRICTLY like this:
+"Question {question_count + 1}: <question text>"
 Previous Answer (if any):
 {last_answer}
 
@@ -139,7 +143,6 @@ CRITICAL INTERVIEW RULES (NON-NEGOTIABLE)
 1️⃣ ASK EXACTLY ONE QUESTION.
    - No explanations
    - No commentary
-   - No numbering
    - No formatting
 
 2️⃣ NEVER repeat:
