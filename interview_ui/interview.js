@@ -49,17 +49,20 @@ function requestFullscreen() {
 }
 
 function pauseInterviewForFullscreen() {
-  if (interviewCompleted) return;
+  if (interviewCompleted || interviewPausedForFullscreen) return;
 
   interviewPausedForFullscreen = true;
   clearInterval(timerInterval);
 
-  document.getElementById("fullscreenOverlay").style.display = "flex";
+  const overlay = document.getElementById("fullscreenOverlay");
+  if (overlay) overlay.style.display = "flex";
 }
 
 
 document.addEventListener("fullscreenchange", () => {
-  if (!document.fullscreenElement && !interviewCompleted) {
+  if (interviewCompleted) return;
+
+  if (!document.fullscreenElement) {
     fullscreenExitCount++;
 
     if (fullscreenExitCount >= MAX_FULLSCREEN_EXIT) {
@@ -73,11 +76,12 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 
+
 /* ================= TAB SWITCH DETECTION ================= */
 document.addEventListener("visibilitychange", () => {
-  if (interviewCompleted) return;
+  if (interviewCompleted || interviewPausedForFullscreen) return;
 
-  if (document.hidden && document.fullscreenElement) {
+  if (document.hidden) {
     tabSwitchCount++;
 
     alert(
@@ -90,6 +94,7 @@ document.addEventListener("visibilitychange", () => {
     }
   }
 });
+
 
 /* ================= TIMER ================= */
 const QUESTION_TIME = 60;
@@ -218,9 +223,13 @@ async function fetchQuestion(answer = null) {
       return;
     }
 
+    submitBtn.disabled = false;
+    submitBtn.innerText = "Submit";
     showQuestion(data.question);
 
   } catch (e) {
+    submitBtn.disabled = false;
+    submitBtn.innerText = "Submit";
     alert("Interview error. Refresh if needed.");
   }
 }
@@ -429,16 +438,17 @@ const mlCamera = new Camera(videoEl, {
 });
 
 
-document.getElementById("resumeFullscreenBtn").onclick = () => {
-  document.documentElement.requestFullscreen();
+document.getElementById("resumeFullscreenBtn").onclick = async () => {
+  await document.documentElement.requestFullscreen();
 
-  document.getElementById("fullscreenOverlay").style.display = "none";
+  const overlay = document.getElementById("fullscreenOverlay");
+  if (overlay) overlay.style.display = "none";
 
   interviewPausedForFullscreen = false;
 
-  // Resume timer safely
-  startTimer();
+  if (!interviewCompleted) startTimer();
 };
+
 
 /* ================= START INTERVIEW ================= */
 document.getElementById("startInterviewBtn").onclick = async () => {
