@@ -13,6 +13,7 @@ let interviewCompleted = false;
 let fullscreenExitCount = 0;
 let tabSwitchCount = 0;
 let cameraFailureCount = 0;
+let interviewPausedForFullscreen = false;
 
 const MAX_FULLSCREEN_EXIT = 3;
 const MAX_TAB_SWITCH = 3;
@@ -47,32 +48,46 @@ function requestFullscreen() {
   else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
 }
 
+function pauseInterviewForFullscreen() {
+  if (interviewCompleted) return;
+
+  interviewPausedForFullscreen = true;
+  clearInterval(timerInterval);
+
+  document.getElementById("fullscreenOverlay").style.display = "flex";
+}
+
+
 document.addEventListener("fullscreenchange", () => {
   if (!document.fullscreenElement && !interviewCompleted) {
     fullscreenExitCount++;
 
-    alert(
-      `⚠️ Fullscreen is mandatory.\nExit ${fullscreenExitCount}/${MAX_FULLSCREEN_EXIT}`
-    );
-
     if (fullscreenExitCount >= MAX_FULLSCREEN_EXIT) {
+      alert("❌ Interview terminated (fullscreen violation).");
       finishInterview(true);
+      return;
     }
+
+    pauseInterviewForFullscreen();
   }
 });
 
+
 /* ================= TAB SWITCH DETECTION ================= */
-window.addEventListener("blur", () => {
+document.addEventListener("visibilitychange", () => {
   if (interviewCompleted) return;
 
-  tabSwitchCount++;
-  alert(
-    `⚠️ Tab switching detected.\nWarning ${tabSwitchCount}/${MAX_TAB_SWITCH}`
-  );
+  if (document.hidden && document.fullscreenElement) {
+    tabSwitchCount++;
 
-  if (tabSwitchCount >= MAX_TAB_SWITCH) {
-    alert("❌ Interview terminated (tab switching).");
-    finishInterview(true);
+    alert(
+      `⚠️ Tab switching detected.\nWarning ${tabSwitchCount}/${MAX_TAB_SWITCH}`
+    );
+
+    if (tabSwitchCount >= MAX_TAB_SWITCH) {
+      alert("❌ Interview terminated (tab switching).");
+      finishInterview(true);
+    }
   }
 });
 
@@ -414,6 +429,16 @@ const mlCamera = new Camera(videoEl, {
 });
 
 
+document.getElementById("resumeFullscreenBtn").onclick = () => {
+  document.documentElement.requestFullscreen();
+
+  document.getElementById("fullscreenOverlay").style.display = "none";
+
+  interviewPausedForFullscreen = false;
+
+  // Resume timer safely
+  startTimer();
+};
 
 /* ================= START INTERVIEW ================= */
 document.getElementById("startInterviewBtn").onclick = async () => {
