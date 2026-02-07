@@ -280,8 +280,6 @@ window.onload = async () => {
 };
 
 /* ================= ML ANTI-CHEAT ================= */
-
-const videoEl = document.getElementById("camera");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 
