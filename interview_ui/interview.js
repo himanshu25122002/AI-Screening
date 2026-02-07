@@ -286,42 +286,80 @@ function finishInterview(force = false) {
 
 
 
-/* ================= ML ANTI-CHEAT ================= */
-/* ================= ML ANTI-CHEAT (STABLE VERSION) ================= */
+/* ================= ML ANTI-CHEAT (STABLE & FAIR) ================= */
 
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 
-let cheatScore = 0;
+/* ---------------- GLOBAL STATE ---------------- */
 let warnings = 0;
 const MAX_WARNINGS = 3;
-const CHEAT_LIMIT = 100;
 
-// frame counters
+// grace period (let candidate settle)
+const INTERVIEW_START_TIME = Date.now();
+const GRACE_PERIOD_MS = 8000;
+
+// cooldown to prevent spam
+let lastWarningTime = 0;
+const WARNING_COOLDOWN_MS = 3000;
+
+/* ---------------- FRAME ACCUMULATORS ---------------- */
 let noFaceFrames = 0;
 let multiFaceFrames = 0;
 let lookAwayFrames = 0;
 
-// thresholds (assuming ~30fps)
-const NO_FACE_THRESHOLD = 60;       // 2 sec
-const MULTI_FACE_THRESHOLD = 90;    // 3 sec
-const LOOK_AWAY_THRESHOLD = 120;    // 4 sec
+/* ---------------- THRESHOLDS (30 FPS SAFE) ---------------- */
+const NO_FACE_THRESHOLD = 90;        // ~3 sec
+const MULTI_FACE_THRESHOLD = 120;    // ~4 sec
+const LOOK_AWAY_THRESHOLD = 150;     // ~5 sec
 
+/* ---------------- UI WARNING (NO alert) ---------------- */
+function showWarning(message) {
+  const box = document.createElement("div");
+  box.innerText = `⚠️ Warning ${warnings}/${MAX_WARNINGS}: ${message}`;
+  box.style.position = "fixed";
+  box.style.top = "20px";
+  box.style.left = "50%";
+  box.style.transform = "translateX(-50%)";
+  box.style.background = "#ffb020";
+  box.style.color = "#000";
+  box.style.padding = "12px 18px";
+  box.style.borderRadius = "10px";
+  box.style.zIndex = "9999";
+  box.style.fontWeight = "600";
+
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 2500);
+}
+
+/* ---------------- WARNING LOGIC ---------------- */
 function issueWarning(reason) {
+  const now = Date.now();
+
+  // ignore during grace period
+  if (now - INTERVIEW_START_TIME < GRACE_PERIOD_MS) return;
+
+  // throttle warnings
+  if (now - lastWarningTime < WARNING_COOLDOWN_MS) return;
+  lastWarningTime = now;
+
   warnings++;
-  alert(`⚠️ Warning ${warnings}/${MAX_WARNINGS}\n${reason}`);
+  console.warn("⚠️ Anti-cheat warning:", reason, warnings);
+
+  showWarning(reason);
 
   if (warnings >= MAX_WARNINGS) {
-    terminateInterview("Interview terminated due to repeated suspicious behavior.");
+    terminateInterview("Repeated suspicious behavior detected.");
   }
 }
 
+/* ---------------- TERMINATION ---------------- */
 function terminateInterview(reason) {
-  alert(`❌ ${reason}`);
-  finishInterview(true);
+  showWarning(reason);
+  setTimeout(() => finishInterview(true), 1500);
 }
 
-/* ---------- FACE DETECTION (COUNT) ---------- */
+/* ================= FACE DETECTION ================= */
 const faceDetector = new FaceDetection({
   locateFile: (file) =>
     `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
@@ -335,20 +373,16 @@ faceDetector.setOptions({
 faceDetector.onResults((res) => {
   const faceCount = res.detections ? res.detections.length : 0;
 
-  if (faceCount === 0) {
-    noFaceFrames++;
-  } else {
-    noFaceFrames = 0;
-  }
+  // no face
+  if (faceCount === 0) noFaceFrames++;
+  else noFaceFrames = 0;
 
-  if (faceCount > 1) {
-    multiFaceFrames++;
-  } else {
-    multiFaceFrames = 0;
-  }
+  // multiple faces
+  if (faceCount > 1) multiFaceFrames++;
+  else multiFaceFrames = 0;
 
   if (noFaceFrames === NO_FACE_THRESHOLD) {
-    issueWarning("Face not visible. Please stay in camera frame.");
+    issueWarning("Face not visible. Please stay in frame.");
   }
 
   if (multiFaceFrames === MULTI_FACE_THRESHOLD) {
@@ -356,7 +390,7 @@ faceDetector.onResults((res) => {
   }
 });
 
-/* ---------- FACE MESH (EYE + HEAD MOVEMENT) ---------- */
+/* ================= FACE MESH (EYE / HEAD) ================= */
 const faceMesh = new FaceMesh({
   locateFile: (file) =>
     `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
@@ -370,12 +404,9 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults((res) => {
-  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) {
-    return; // already handled by faceDetector
-  }
+  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) return;
 
   const lm = res.multiFaceLandmarks[0];
-
   const leftEye = lm[33];
   const rightEye = lm[263];
   const nose = lm[1];
@@ -386,14 +417,12 @@ faceMesh.onResults((res) => {
   const dx = Math.abs(nose.x - eyeCenterX);
   const dy = Math.abs(nose.y - eyeCenterY);
 
-  if (dx > 0.06 || dy > 0.06) {
-    lookAwayFrames++;
-  } else {
-    lookAwayFrames = 0;
-  }
+  // relaxed, human-safe thresholds
+  if (dx > 0.12 || dy > 0.15) lookAwayFrames++;
+  else lookAwayFrames = 0;
 
   if (lookAwayFrames === LOOK_AWAY_THRESHOLD) {
-    issueWarning("Please maintain eye contact with the screen.");
+    issueWarning("Please maintain attention on the screen.");
   }
 
   canvas.width = videoEl.videoWidth;
@@ -401,7 +430,7 @@ faceMesh.onResults((res) => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
-/* ---------- CAMERA PIPELINE ---------- */
+/* ================= CAMERA PIPELINE ================= */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
     await faceDetector.send({ image: videoEl });
@@ -411,18 +440,17 @@ const mlCamera = new Camera(videoEl, {
   height: 480,
 });
 
-mlCamera.start();
-
+/* ================= START INTERVIEW ================= */
 document.getElementById("startInterviewBtn").onclick = async () => {
   requestFullscreen();
 
   interviewStarted = true;
-
   document.getElementById("startScreen").remove();
 
   await initCamera();
+  mlCamera.start(); // 🔥 ensure ML starts AFTER camera ready
 
-  fetchQuestion(); // ✅ now allowed
+  fetchQuestion();
 };
 
 
