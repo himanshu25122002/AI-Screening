@@ -326,7 +326,7 @@ const WARNING_COOLDOWN = 5000; // 5 sec
 
 // thresholds (relaxed + human-safe)
 const NO_FACE_THRESHOLD = 90;        // 3 sec
-const MULTI_FACE_THRESHOLD = 60;    
+const MULTI_FACE_THRESHOLD = 45;    
 const LOOK_AWAY_THRESHOLD = 180;     // 6 sec
 
 function now() {
@@ -372,6 +372,9 @@ faceDetector.setOptions({
 
 faceDetector.onResults((res) => {
   const count = res.detections?.length || 0;
+  if (!videoEl.videoWidth || !videoEl.videoHeight) {
+    return;
+  }
 
   if (count === 0) {
     noFaceFrames++;
@@ -382,7 +385,7 @@ faceDetector.onResults((res) => {
   if (count > 1) {
     multiFaceFrames++;
   } else {
-    multiFaceFrames = Math.max(multiFaceFrames - 2, 0);
+    multiFaceFrames = Math.max(multiFaceFrames - 1, 0);
   }
 
   if (noFaceFrames > NO_FACE_THRESHOLD) {
@@ -439,6 +442,14 @@ faceMesh.onResults((res) => {
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
+    if (
+      !videoEl.videoWidth ||
+      !videoEl.videoHeight ||
+      videoEl.paused ||
+      videoEl.ended
+    ) {
+      return;
+    }
     await faceDetector.send({ image: videoEl });
     await faceMesh.send({ image: videoEl });
   },
@@ -467,7 +478,11 @@ document.getElementById("startInterviewBtn").onclick = async () => {
   document.getElementById("startScreen").remove();
 
   await initCamera();
-  mlCamera.start(); // 🔥 ensure ML starts AFTER camera ready
+  await new Promise(resolve => {
+    if (videoEl.readyState >= 2) return resolve();
+    videoEl.onloadeddata = () => resolve();
+  });
+  mlCamera.start(); 
 
   fetchQuestion();
 };
