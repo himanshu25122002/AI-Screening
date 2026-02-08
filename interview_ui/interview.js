@@ -3,6 +3,7 @@
  * FULLSCREEN + CAMERA + TAB LOCK + STT + TTS
  * ZERO BACKEND CHANGES
  *************************************************/
+console.log("✅ interview.js loaded");
 
 const API_BASE = "https://ai-screening-wbb0.onrender.com";
 
@@ -25,6 +26,7 @@ if (!candidateId) {
   throw new Error("candidate_id missing");
 }
 
+
 /* ================= AI STATE ================= */
 let aiState = "idle";
 function setState(state) {
@@ -40,9 +42,7 @@ const micBtn = document.getElementById("micBtn");
 const submitBtn = document.getElementById("submitBtn");
 const timerEl = document.getElementById("timer");
 const videoEl = document.getElementById("camera");
-if (!videoEl) {
-  console.error("❌ Camera video element not found");
-}
+console.log("🎥 videoEl =", videoEl);
 /* ================= FULLSCREEN ENFORCEMENT ================= */
 function requestFullscreen() {
   const el = document.documentElement;
@@ -327,9 +327,9 @@ let lastWarningTime = 0;
 const WARNING_COOLDOWN = 5000; // 5 sec
 
 // thresholds (relaxed + human-safe)
-const NO_FACE_THRESHOLD = 30;        // 3 sec
+const NO_FACE_THRESHOLD = 25;        // 3 sec
 const MULTI_FACE_THRESHOLD = 20;    
-const LOOK_AWAY_THRESHOLD = 45;     // 6 sec
+const LOOK_AWAY_THRESHOLD = 40;     // 6 sec
 
 function now() {
   return Date.now();
@@ -373,28 +373,34 @@ faceDetector.setOptions({
 });
 
 faceDetector.onResults((res) => {
-  const count = res.detections?.length || 0;
-  if (!videoEl.srcObject) return;
 
-  if (count === 0) {
+  console.log(
+    "👤 FaceDetection:",
+    res.detections ? res.detections.length : 0
+  );
+  const faceCount = res.detections ? res.detections.length : 0;
+
+  // NO FACE
+  if (faceCount === 0) {
     noFaceFrames++;
   } else {
     noFaceFrames = 0;
   }
 
-  if (count > 1) {
+  // MULTIPLE FACES
+  if (faceCount > 1) {
     multiFaceFrames++;
   } else {
-    multiFaceFrames = Math.max(multiFaceFrames - 1, 0);
+    multiFaceFrames = 0;
   }
 
-  if (noFaceFrames > NO_FACE_THRESHOLD) {
-    issueWarning("Face not visible. Please stay in frame.");
+  if (noFaceFrames >= NO_FACE_THRESHOLD) {
+    issueWarning("Face not visible. Camera must show your face.");
     noFaceFrames = 0;
   }
 
-  if (multiFaceFrames > MULTI_FACE_THRESHOLD) {
-    issueWarning("Multiple faces detected.");
+  if (multiFaceFrames >= MULTI_FACE_THRESHOLD) {
+    issueWarning("Multiple faces detected. Only one person allowed.");
     multiFaceFrames = 0;
   }
 });
@@ -413,39 +419,37 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults((res) => {
-  // Face presence handled by faceDetector
-  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) {
+
+  console.log(
+    "🧠 FaceMesh:",
+    res.multiFaceLandmarks ? res.multiFaceLandmarks.length : 0
+  );
+  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length !== 1) {
+    lookAwayFrames = 0;
     return;
   }
 
   const lm = res.multiFaceLandmarks[0];
 
-  // Key landmarks
   const leftEye = lm[33];
   const rightEye = lm[263];
   const nose = lm[1];
 
-  // Eye center
   const eyeCenterX = (leftEye.x + rightEye.x) / 2;
   const eyeCenterY = (leftEye.y + rightEye.y) / 2;
 
-  // Distances
-  const eyeDistance = Math.abs(leftEye.x - rightEye.x) + 1e-6;
   const dx = Math.abs(nose.x - eyeCenterX);
   const dy = Math.abs(nose.y - eyeCenterY);
 
-  // NORMALIZED gaze deviation
-  const horizontalRatio = dx / eyeDistance;
-  const verticalRatio = dy / eyeDistance;
+  // HARD THRESHOLDS (pixel-independent)
+  const LOOK_AWAY =
+    dx > 0.055 ||   // left/right
+    dy > 0.065;     // up/down
 
-  // ===== STRICT BUT HUMAN-SAFE THRESHOLDS =====
-  const LOOK_LEFT_RIGHT = horizontalRatio > 0.20;
-  const LOOK_UP_DOWN = verticalRatio > 0.25;
-
-  if (LOOK_LEFT_RIGHT || LOOK_UP_DOWN) {
+  if (LOOK_AWAY) {
     lookAwayFrames++;
   } else {
-    lookAwayFrames = Math.max(lookAwayFrames - 1, 0);
+    lookAwayFrames = 0;
   }
 
   if (lookAwayFrames >= LOOK_AWAY_THRESHOLD) {
@@ -455,24 +459,24 @@ faceMesh.onResults((res) => {
 });
 
 
-
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
-    if (
-      !videoEl.videoWidth ||
-      !videoEl.videoHeight ||
-      videoEl.paused ||
-      videoEl.ended
-    ) {
+    console.log("🟢 frame");
+
+    if (!videoEl.videoWidth || !videoEl.videoHeight) {
+      console.warn("⚠️ video not ready");
       return;
     }
+
     await faceDetector.send({ image: videoEl });
     await faceMesh.send({ image: videoEl });
   },
   width: 640,
   height: 480,
 });
+
+
 
 
 document.getElementById("resumeFullscreenBtn").onclick = async () => {
@@ -499,8 +503,14 @@ document.getElementById("startInterviewBtn").onclick = async () => {
     if (videoEl.readyState >= 2) return resolve();
     videoEl.onloadeddata = () => resolve();
   });
-  mlCamera.start(); 
+  async function startMLPipeline() {
+    console.log("🚀 Starting ML pipeline");
+    await new Promise((r) => setTimeout(r, 1000));
+    console.log("📸 Starting camera");
+    mlCamera.start();
+  }
 
+  startMLPipeline();
   fetchQuestion();
 };
 
