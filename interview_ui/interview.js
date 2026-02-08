@@ -4,6 +4,9 @@
  * ZERO BACKEND CHANGES
  *************************************************/
 console.log("✅ interview.js loaded");
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("❌ Unhandled promise rejection:", e.reason);
+});
 
 const API_BASE = "https://ai-screening-wbb0.onrender.com";
 
@@ -363,101 +366,71 @@ function terminateInterview(reason) {
 
 /* ---------- FACE DETECTION ---------- */
 const faceDetector = new FaceDetection({
-  locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`,
+  locateFile: (file) =>{
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/${file}`;
+  },
 });
 
 faceDetector.setOptions({
-  model: "full",
+   modelSelection: 0,
   minDetectionConfidence: 0.6,
 });
 
 faceDetector.onResults((res) => {
 
-  console.log(
-    "👤 FaceDetection:",
-    res.detections ? res.detections.length : 0
-  );
-  const faceCount = res.detections ? res.detections.length : 0;
+  const count = res.detections?.length || 0;
+  console.log("👤 Face count:", count);
 
-  // NO FACE
-  if (faceCount === 0) {
-    noFaceFrames++;
-  } else {
-    noFaceFrames = 0;
+  if (count === 0) noFaceFrames++;
+  else noFaceFrames = 0;
+
+  if (count > 1) multiFaceFrames++;
+  else multiFaceFrames = 0;
+
+  if (noFaceFrames === 15) {
+    issueWarning("Face not visible");
   }
 
-  // MULTIPLE FACES
-  if (faceCount > 1) {
-    multiFaceFrames++;
-  } else {
-    multiFaceFrames = 0;
-  }
-
-  if (noFaceFrames >= NO_FACE_THRESHOLD) {
-    issueWarning("Face not visible. Camera must show your face.");
-    noFaceFrames = 0;
-  }
-
-  if (multiFaceFrames >= MULTI_FACE_THRESHOLD) {
-    issueWarning("Multiple faces detected. Only one person allowed.");
-    multiFaceFrames = 0;
+  if (multiFaceFrames === 10) {
+    issueWarning("Multiple faces detected");
   }
 });
 
 /* ---------- FACE MESH (RELAXED EYE TRACKING) ---------- */
 const faceMesh = new FaceMesh({
-  locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+  locateFile: (file) => {
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`;
+  },
 });
 
 faceMesh.setOptions({
-  maxNumFaces: 1,
+  maxNumFaces: 2,
   refineLandmarks: true,
   minDetectionConfidence: 0.6,
   minTrackingConfidence: 0.6,
 });
 
 faceMesh.onResults((res) => {
-
-  console.log(
-    "🧠 FaceMesh:",
-    res.multiFaceLandmarks ? res.multiFaceLandmarks.length : 0
-  );
-  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length !== 1) {
-    lookAwayFrames = 0;
-    return;
-  }
+  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length !== 1) return;
 
   const lm = res.multiFaceLandmarks[0];
-
+  const nose = lm[1];
   const leftEye = lm[33];
   const rightEye = lm[263];
-  const nose = lm[1];
 
-  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
-  const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+  const eyeX = (leftEye.x + rightEye.x) / 2;
+  const eyeY = (leftEye.y + rightEye.y) / 2;
 
-  const dx = Math.abs(nose.x - eyeCenterX);
-  const dy = Math.abs(nose.y - eyeCenterY);
+  const dx = Math.abs(nose.x - eyeX);
+  const dy = Math.abs(nose.y - eyeY);
 
-  // HARD THRESHOLDS (pixel-independent)
-  const LOOK_AWAY =
-    dx > 0.055 ||   // left/right
-    dy > 0.065;     // up/down
+  if (dx > 0.06 || dy > 0.07) lookAwayFrames++;
+  else lookAwayFrames = 0;
 
-  if (LOOK_AWAY) {
-    lookAwayFrames++;
-  } else {
-    lookAwayFrames = 0;
-  }
-
-  if (lookAwayFrames >= LOOK_AWAY_THRESHOLD) {
-    issueWarning("Please maintain eye contact with the screen.");
-    lookAwayFrames = 0;
+  if (lookAwayFrames === 25) {
+    issueWarning("Please look at the screen");
   }
 });
-
 
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
