@@ -366,13 +366,12 @@ function terminateInterview(reason) {
 
 /* ---------- FACE DETECTION ---------- */
 const faceDetector = new FaceDetection({
-  locateFile: (file) =>{
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/${file}`;
-  },
+  locateFile: (file) =>
+    `./mediapipe/face_detection/${file}`,
 });
 
 faceDetector.setOptions({
-   modelSelection: 0,
+   model: "full",
   minDetectionConfidence: 0.6,
 });
 
@@ -398,9 +397,8 @@ faceDetector.onResults((res) => {
 
 /* ---------- FACE MESH (RELAXED EYE TRACKING) ---------- */
 const faceMesh = new FaceMesh({
-  locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`;
-  },
+  locateFile: (file) => 
+    `./mediapipe/face_mesh/${file}`,
 });
 
 faceMesh.setOptions({
