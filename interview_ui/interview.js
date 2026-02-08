@@ -40,7 +40,9 @@ const micBtn = document.getElementById("micBtn");
 const submitBtn = document.getElementById("submitBtn");
 const timerEl = document.getElementById("timer");
 const videoEl = document.getElementById("camera");
-
+if (!videoEl) {
+  console.error("❌ Camera video element not found");
+}
 /* ================= FULLSCREEN ENFORCEMENT ================= */
 function requestFullscreen() {
   const el = document.documentElement;
