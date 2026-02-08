@@ -123,8 +123,15 @@ class ResumeParser:
             normalized_text
         )
 
+        def _is_sane_email(email: str) -> bool:
+            local = email.split("@")[0]
+            return any(c.isalpha() for c in local)
+
+
         if emails:
-            info["email"] = emails[0]
+            sane_emails = [e for e in emails if _is_sane_email(e)]
+            info["email"] = sane_emails[0] if sane_emails else emails[0]
+
 
             
         lines = resume_text.split("\n")
@@ -179,6 +186,7 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
 
