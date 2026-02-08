@@ -327,9 +327,9 @@ let lastWarningTime = 0;
 const WARNING_COOLDOWN = 5000; // 5 sec
 
 // thresholds (relaxed + human-safe)
-const NO_FACE_THRESHOLD = 90;        // 3 sec
-const MULTI_FACE_THRESHOLD = 45;    
-const LOOK_AWAY_THRESHOLD = 180;     // 6 sec
+const NO_FACE_THRESHOLD = 30;        // 3 sec
+const MULTI_FACE_THRESHOLD = 20;    
+const LOOK_AWAY_THRESHOLD = 45;     // 6 sec
 
 function now() {
   return Date.now();
@@ -374,14 +374,12 @@ faceDetector.setOptions({
 
 faceDetector.onResults((res) => {
   const count = res.detections?.length || 0;
-  if (!videoEl.videoWidth || !videoEl.videoHeight) {
-    return;
-  }
+  if (!videoEl.srcObject) return;
 
   if (count === 0) {
     noFaceFrames++;
   } else {
-    noFaceFrames = Math.max(noFaceFrames - 2, 0);
+    noFaceFrames = 0;
   }
 
   if (count > 1) {
@@ -415,31 +413,47 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults((res) => {
-  if (!res.multiFaceLandmarks?.length) return;
+  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) {
+    return; // face absence handled by faceDetector
+  }
 
   const lm = res.multiFaceLandmarks[0];
+
+  // Key landmarks
   const leftEye = lm[33];
   const rightEye = lm[263];
   const nose = lm[1];
 
+  // Eye center
   const eyeCenterX = (leftEye.x + rightEye.x) / 2;
   const eyeCenterY = (leftEye.y + rightEye.y) / 2;
 
-  const dx = Math.abs(nose.x - eyeCenterX);
-  const dy = Math.abs(nose.y - eyeCenterY);
+  // Distances
+  const eyeDistance = Math.abs(leftEye.x - rightEye.x);
+  const horizontalOffset = Math.abs(nose.x - eyeCenterX);
+  const verticalOffset = Math.abs(nose.y - eyeCenterY);
 
-  // relaxed thresholds
-  if (dx > 0.09 || dy > 0.09) {
+  const horizontalRatio = horizontalOffset / eyeDistance;
+  const verticalRatio = verticalOffset / eyeDistance;
+
+  // ===== LOOK AWAY DETECTION =====
+  if (horizontalRatio > 0.35 || verticalRatio > 0.40) {
     lookAwayFrames++;
   } else {
-    lookAwayFrames = Math.max(lookAwayFrames - 2, 0); // decay
-  }
-
-  if (lookAwayFrames > LOOK_AWAY_THRESHOLD) {
-    issueWarning("Please maintain general attention to the screen.");
     lookAwayFrames = 0;
   }
+
+  if (lookAwayFrames >= LOOK_AWAY_THRESHOLD) {
+    issueWarning("Please maintain attention towards the screen.");
+    lookAwayFrames = 0;
+  }
+
+  // Optional debug overlay (safe to keep)
+  canvas.width = videoEl.videoWidth;
+  canvas.height = videoEl.videoHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
+
 
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
