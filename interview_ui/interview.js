@@ -369,7 +369,7 @@ const faceDetector = new FaceDetection({
 
 faceDetector.setOptions({
   model: "full",
-  minDetectionConfidence: 0.5,
+  minDetectionConfidence: 0.6,
 });
 
 faceDetector.onResults((res) => {
@@ -413,8 +413,9 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults((res) => {
+  // Face presence handled by faceDetector
   if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) {
-    return; // face absence handled by faceDetector
+    return;
   }
 
   const lm = res.multiFaceLandmarks[0];
@@ -429,30 +430,30 @@ faceMesh.onResults((res) => {
   const eyeCenterY = (leftEye.y + rightEye.y) / 2;
 
   // Distances
-  const eyeDistance = Math.abs(leftEye.x - rightEye.x);
-  const horizontalOffset = Math.abs(nose.x - eyeCenterX);
-  const verticalOffset = Math.abs(nose.y - eyeCenterY);
+  const eyeDistance = Math.abs(leftEye.x - rightEye.x) + 1e-6;
+  const dx = Math.abs(nose.x - eyeCenterX);
+  const dy = Math.abs(nose.y - eyeCenterY);
 
-  const horizontalRatio = horizontalOffset / eyeDistance;
-  const verticalRatio = verticalOffset / eyeDistance;
+  // NORMALIZED gaze deviation
+  const horizontalRatio = dx / eyeDistance;
+  const verticalRatio = dy / eyeDistance;
 
-  // ===== LOOK AWAY DETECTION =====
-  if (horizontalRatio > 0.35 || verticalRatio > 0.40) {
+  // ===== STRICT BUT HUMAN-SAFE THRESHOLDS =====
+  const LOOK_LEFT_RIGHT = horizontalRatio > 0.20;
+  const LOOK_UP_DOWN = verticalRatio > 0.25;
+
+  if (LOOK_LEFT_RIGHT || LOOK_UP_DOWN) {
     lookAwayFrames++;
   } else {
-    lookAwayFrames = 0;
+    lookAwayFrames = Math.max(lookAwayFrames - 1, 0);
   }
 
   if (lookAwayFrames >= LOOK_AWAY_THRESHOLD) {
-    issueWarning("Please maintain attention towards the screen.");
+    issueWarning("Please maintain eye contact with the screen.");
     lookAwayFrames = 0;
   }
-
-  // Optional debug overlay (safe to keep)
-  canvas.width = videoEl.videoWidth;
-  canvas.height = videoEl.videoHeight;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
+
 
 
 /* ---------- CAMERA PIPELINE ---------- */
