@@ -371,7 +371,7 @@ const faceDetector = new FaceDetection({
 });
 
 faceDetector.setOptions({
-   model: "full",
+   model: "short",
   minDetectionConfidence: 0.6,
 });
 
@@ -433,19 +433,13 @@ faceMesh.onResults((res) => {
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
-    console.log("🟢 frame");
-
-    if (!videoEl.videoWidth || !videoEl.videoHeight) {
-      console.warn("⚠️ video not ready");
-      return;
-    }
-
-    await faceDetector.send({ image: videoEl });
+    await faceDetection.send({ image: videoEl });
     await faceMesh.send({ image: videoEl });
   },
   width: 640,
   height: 480,
 });
+
 
 
 
