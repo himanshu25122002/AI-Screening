@@ -253,8 +253,21 @@ RESUME TEXT
 
         extracted_email = self.extract_email(resume_text)
 
-        if extracted_email != current_email:
-            print("✅ Updating candidate email:", extracted_email)
+        def is_email_upgrade(old: str, new: str) -> bool:
+            if not new:
+                return False
+            if not old:
+                return True
+   
+            old_local = old.split("@")[0]
+            new_local = new.split("@")[0]
+            return (
+                any(c.isalpha() for c in new_local)
+                and not any(c.isalpha() for c in old_local)
+            )
+
+        if is_email_upgrade(current_email, extracted_email):
+            print("✅ Upgrading candidate email:", extracted_email)
 
             supabase.table("candidates").update({
                 "email": extracted_email,
@@ -429,6 +442,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
