@@ -326,7 +326,7 @@ const WARNING_COOLDOWN = 5000; // 5 sec
 
 // thresholds (relaxed + human-safe)
 const NO_FACE_THRESHOLD = 90;        // 3 sec
-const MULTI_FACE_THRESHOLD = 120;    // 4 sec
+const MULTI_FACE_THRESHOLD = 60;    
 const LOOK_AWAY_THRESHOLD = 180;     // 6 sec
 
 function now() {
@@ -366,15 +366,24 @@ const faceDetector = new FaceDetection({
 });
 
 faceDetector.setOptions({
-  model: "short",
-  minDetectionConfidence: 0.6,
+  model: "full",
+  minDetectionConfidence: 0.5,
 });
 
 faceDetector.onResults((res) => {
   const count = res.detections?.length || 0;
 
-  noFaceFrames = count === 0 ? noFaceFrames + 1 : 0;
-  multiFaceFrames = count > 1 ? multiFaceFrames + 1 : 0;
+  if (count === 0) {
+    noFaceFrames++;
+  } else {
+    noFaceFrames = Math.max(noFaceFrames - 2, 0);
+  }
+
+  if (count > 1) {
+    multiFaceFrames++;
+  } else {
+    multiFaceFrames = Math.max(multiFaceFrames - 2, 0);
+  }
 
   if (noFaceFrames > NO_FACE_THRESHOLD) {
     issueWarning("Face not visible. Please stay in frame.");
