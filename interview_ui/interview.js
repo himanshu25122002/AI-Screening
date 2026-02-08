@@ -463,26 +463,36 @@ document.getElementById("resumeFullscreenBtn").onclick = async () => {
 
 
 /* ================= START INTERVIEW ================= */
-document.getElementById("startInterviewBtn").onclick = async () => {
-  requestFullscreen();
+window.addEventListener("DOMContentLoaded", () => {
+  const startBtn = document.getElementById("startInterviewBtn");
 
-  interviewStarted = true;
-  document.getElementById("startScreen").remove();
-
-  await initCamera();
-  await new Promise(resolve => {
-    if (videoEl.readyState >= 2) return resolve();
-    videoEl.onloadeddata = () => resolve();
-  });
-  async function startMLPipeline() {
-    console.log("🚀 Starting ML pipeline");
-    await new Promise((r) => setTimeout(r, 1000));
-    console.log("📸 Starting camera");
-    mlCamera.start();
+  if (!startBtn) {
+    console.error("❌ Start Interview button not found");
+    return;
   }
 
-  startMLPipeline();
-  fetchQuestion();
-};
+  console.log("✅ Start Interview button ready");
+
+  startBtn.addEventListener("click", async () => {
+    console.log("🚀 Interview started");
+
+    requestFullscreen();
+
+    interviewStarted = true;
+    document.getElementById("startScreen")?.remove();
+
+    await initCamera();
+
+    await new Promise(resolve => {
+      if (videoEl.readyState >= 2) return resolve();
+      videoEl.onloadeddata = () => resolve();
+    });
+
+    console.log("📸 Starting ML pipeline");
+    mlCamera.start();
+
+    fetchQuestion();
+  });
+});
 
 
