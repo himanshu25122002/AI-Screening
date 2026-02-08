@@ -333,9 +333,9 @@ let lastWarningTime = 0;
 const WARNING_COOLDOWN = 5000; // 5 sec
 
 // thresholds (relaxed + human-safe)
-const NO_FACE_THRESHOLD = 25;        // 3 sec
-const MULTI_FACE_THRESHOLD = 20;    
-const LOOK_AWAY_THRESHOLD = 40;     // 6 sec
+const NO_FACE_THRESHOLD = 10;        // 3 sec
+const MULTI_FACE_THRESHOLD = 8;    
+const LOOK_AWAY_THRESHOLD = 15;     // 6 sec
 
 function now() {
   return Date.now();
@@ -412,7 +412,18 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults((res) => {
-  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length !== 1) return;
+  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) return;
+
+  if (res.multiFaceLandmarks.length > 1) {
+    multiFaceFrames++;
+    if (multiFaceFrames === 5) {
+      issueWarning("Multiple faces detected");
+    }
+    return;
+  } else {
+    multiFaceFrames = 0;
+  }
+
 
   const lm = res.multiFaceLandmarks[0];
   const nose = lm[1];
@@ -436,7 +447,7 @@ faceMesh.onResults((res) => {
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
-    await faceDetection.send({ image: videoEl });
+    await faceDetector.send({ image: videoEl });
     await faceMesh.send({ image: videoEl });
   },
   width: 640,
