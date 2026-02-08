@@ -111,6 +111,12 @@ class ResumeParser:
             return info
             
         normalized_text = ResumeParser._normalize_email_context(resume_text)
+        
+        normalized_text = re.sub(
+            r"([a-zA-Z0-9._%+-]+)\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})",
+            r"\1\2",
+            normalized_text
+        )
 
         emails = re.findall(
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
@@ -118,7 +124,7 @@ class ResumeParser:
         )
 
         if emails:
-            info["email"] = max(emails, key=len)
+            info["email"] = emails[0]
 
             
         lines = resume_text.split("\n")
@@ -173,6 +179,7 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
 
