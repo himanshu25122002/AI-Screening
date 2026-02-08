@@ -125,10 +125,13 @@ RESUME TEXT
         if not resume_text:
             return None
 
-        email = self.extract_email_regex(resume_text)
-        if email:
-            return email
-        return self.extract_email_ai(resume_text)
+        regex_email = self.extract_email_regex(resume_text)
+        ai_email = self.extract_email_ai(resume_text)
+
+        if regex_email and ai_email:
+            return ai_email if len(ai_email) > len(regex_email) else regex_email
+        return regex_email or ai_email
+
 
 
 
@@ -426,6 +429,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
