@@ -18,6 +18,9 @@ let fullscreenExitCount = 0;
 let tabSwitchCount = 0;
 let cameraFailureCount = 0;
 let interviewPausedForFullscreen = false;
+let faceDetection = null;
+let faceMesh = null;
+let mlCamera = null;
 
 const MAX_FULLSCREEN_EXIT = 3;
 const MAX_TAB_SWITCH = 3;
