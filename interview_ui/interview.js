@@ -368,8 +368,9 @@ function terminateInterview(reason) {
 
 /* ---------- FACE MESH (RELAXED EYE TRACKING) ---------- */
 const faceMesh = new FaceMesh({
-  locateFile: (file) => 
-    `./mediapipe/face_mesh/${file}`,
+  locateFile: (file) => {
+    return `./mediapipe/${file}`;
+  }
 });
 
 faceMesh.setOptions({
