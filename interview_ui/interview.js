@@ -378,6 +378,17 @@ faceMesh.setOptions({
   minDetectionConfidence: 0.6,
   minTrackingConfidence: 0.6,
 });
+// --- Gaze calibration ---
+let calibrated = false;
+let baseDx = 0;
+let baseDy = 0;
+let calibrationFrames = 0;
+const CALIBRATION_REQUIRED = 30;
+
+// smoothing
+let dxHistory = [];
+let dyHistory = [];
+const SMOOTHING_WINDOW = 10;
 
 faceMesh.onResults((res) => {
   const faces = res.multiFaceLandmarks;
@@ -413,37 +424,49 @@ faceMesh.onResults((res) => {
     multiFaceFrames = 0;
   }
 
-  /* =======================
-     LOOKING AWAY DETECTION
-  ======================= */
-  const lm = faces[0];
 
-  // Stable landmarks
-  const nose = lm[1];
-  const leftEye = lm[33];
-  const rightEye = lm[263];
+if (!calibrated) {
+  baseDx += dx;
+  baseDy += dy;
+  calibrationFrames++;
 
-  // Eye center
-  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
-  const eyeCenterY = (leftEye.y + rightEye.y) / 2;
-
-  const dx = Math.abs(nose.x - eyeCenterX);
-  const dy = Math.abs(nose.y - eyeCenterY);
-
-  // Tuned thresholds (safe for most webcams)
-  const LOOK_X_THRESHOLD = 0.055;
-  const LOOK_Y_THRESHOLD = 0.075;
-
-  if (dx > LOOK_X_THRESHOLD || dy > LOOK_Y_THRESHOLD) {
-    lookAwayFrames++;
-  } else {
-    lookAwayFrames = 0;
+  if (calibrationFrames >= CALIBRATION_REQUIRED) {
+    baseDx /= calibrationFrames;
+    baseDy /= calibrationFrames;
+    calibrated = true;
+    console.log("✅ Gaze calibrated", baseDx, baseDy);
   }
+  return;
+}
 
-  if (lookAwayFrames === 25) {
-    issueWarning("Please look at the screen");
-  }
-});
+// --- SMOOTHING ---
+dxHistory.push(dx);
+dyHistory.push(dy);
+if (dxHistory.length > SMOOTHING_WINDOW) dxHistory.shift();
+if (dyHistory.length > SMOOTHING_WINDOW) dyHistory.shift();
+
+const avgDx = dxHistory.reduce((a, b) => a + b, 0) / dxHistory.length;
+const avgDy = dyHistory.reduce((a, b) => a + b, 0) / dyHistory.length;
+
+// --- DELTA FROM USER BASELINE ---
+const deltaX = Math.abs(avgDx - baseDx);
+const deltaY = Math.abs(avgDy - baseDy);
+
+// relaxed human-safe limits
+const MAX_DELTA_X = 0.12;
+const MAX_DELTA_Y = 0.15;
+
+// sustained violation only
+if (deltaX > MAX_DELTA_X || deltaY > MAX_DELTA_Y) {
+  lookAwayFrames++;
+} else {
+  lookAwayFrames = Math.max(0, lookAwayFrames - 2);
+}
+
+if (lookAwayFrames === 40) {
+  issueWarning("Please look at the screen");
+}
+
 
 
 /* ---------- CAMERA PIPELINE ---------- */
