@@ -53,7 +53,14 @@ class AIService:
             text
         )
 
-        return matches[0] if matches else None
+        for email in matches:
+            local = email.split("@")[0]
+        
+            if any(c.isalpha() for c in local):
+                return email
+
+        return None
+
 
 
 
@@ -224,6 +231,34 @@ RESUME TEXT
             return name
         return self.extract_name_ai(resume_text)
 
+
+
+
+    def is_valid_email_context(self, text: str, email: str) -> bool:
+
+        if not text or not email:
+            return False
+
+        for match in re.finditer(re.escape(email), text):
+            start, end = match.start(), match.end()
+
+            before = text[start - 1] if start > 0 else " "
+            after = text[end] if end < len(text) else " "
+            VALID_BOUNDARY = set([" ", "\n", "\t", "|", "/", "(", ")", "[", "]", ","])
+
+            if before not in VALID_BOUNDARY:
+                return False
+
+            if after not in VALID_BOUNDARY:
+                return False
+
+            return True
+
+        return False
+
+    def is_corrupted_email(self, resume_text: str, email: str) -> bool:
+        return not self.is_valid_email_context(resume_text, email)
+
     # ================================
     # 🧠 RESUME SCREENING (FIXED)
     # ================================
@@ -255,21 +290,12 @@ RESUME TEXT
 
         extracted_email = self.extract_email(resume_text)
 
-        def is_email_upgrade(old: str, new: str) -> bool:
-            if not new:
-                return False
-            if not old:
-                return True
-   
-            old_local = old.split("@")[0]
-            new_local = new.split("@")[0]
-            return (
-                any(c.isalpha() for c in new_local)
-                and not any(c.isalpha() for c in old_local)
-            )
 
-        if is_email_upgrade(current_email, extracted_email):
-            print("✅ Upgrading candidate email:", extracted_email)
+        if extracted_email and (
+            not current_email
+            or self.is_corrupted_email(resume_text, current_email)
+        ):
+            print("✅ Correcting candidate email:", extracted_email)
 
             supabase.table("candidates").update({
                 "email": extracted_email,
@@ -277,6 +303,7 @@ RESUME TEXT
             }).eq("id", candidate_id).execute()
 
             candidate_data["email"] = extracted_email
+
 
         
 
@@ -444,6 +471,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
