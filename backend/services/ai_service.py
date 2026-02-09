@@ -244,17 +244,18 @@ RESUME TEXT
 
             before = text[start - 1] if start > 0 else " "
             after = text[end] if end < len(text) else " "
-            VALID_BOUNDARY = set([" ", "\n", "\t", "|", "/", "(", ")", "[", "]", ","])
 
-            if before not in VALID_BOUNDARY:
+            if before.isalnum() or after.isalnum():
                 return False
 
-            if after not in VALID_BOUNDARY:
+            local = email.split("@")[0]
+            if local.isdigit():
                 return False
 
             return True
 
         return False
+
 
     def is_corrupted_email(self, resume_text: str, email: str) -> bool:
         return not self.is_valid_email_context(resume_text, email)
@@ -471,6 +472,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
