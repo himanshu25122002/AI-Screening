@@ -445,12 +445,14 @@ faceMesh.onResults((res) => {
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
+    if (videoEl.readyState !== 4) return;
     await faceDetector.send({ image: videoEl });
     await faceMesh.send({ image: videoEl });
   },
   width: 640,
   height: 480,
 });
+
 
 
 
