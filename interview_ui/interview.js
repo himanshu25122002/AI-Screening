@@ -365,36 +365,6 @@ function terminateInterview(reason) {
   }, 100);
 }
 
-/* ---------- FACE DETECTION ---------- */
-const faceDetector = new FaceDetection({
-  locateFile: (file) =>
-    `./mediapipe/face_detection/${file}`,
-});
-
-faceDetector.setOptions({
-   model: 'short',
-  minDetectionConfidence: 0.6,
-});
-
-faceDetector.onResults((res) => {
-
-  const count = res.detections?.length || 0;
-  console.log("👤 Face count:", count);
-
-  if (count === 0) noFaceFrames++;
-  else noFaceFrames = 0;
-
-  if (count > 1) multiFaceFrames++;
-  else multiFaceFrames = 0;
-
-  if (noFaceFrames === 15) {
-    issueWarning("Face not visible");
-  }
-
-  if (multiFaceFrames === 10) {
-    issueWarning("Multiple faces detected");
-  }
-});
 
 /* ---------- FACE MESH (RELAXED EYE TRACKING) ---------- */
 const faceMesh = new FaceMesh({
@@ -410,11 +380,32 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults((res) => {
-  if (!res.multiFaceLandmarks || res.multiFaceLandmarks.length === 0) return;
+  const faces = res.multiFaceLandmarks;
 
-  if (res.multiFaceLandmarks.length > 1) {
+  /* =======================
+     NO FACE DETECTION
+  ======================= */
+  if (!faces || faces.length === 0) {
+    noFaceFrames++;
+    multiFaceFrames = 0;
+    lookAwayFrames = 0;
+
+    if (noFaceFrames === 15) {
+      issueWarning("Face not detected");
+    }
+    return;
+  } else {
+    noFaceFrames = 0;
+  }
+
+  /* =======================
+     MULTIPLE FACE DETECTION
+  ======================= */
+  if (faces.length > 1) {
     multiFaceFrames++;
-    if (multiFaceFrames === 5) {
+    lookAwayFrames = 0;
+
+    if (multiFaceFrames === 8) {
       issueWarning("Multiple faces detected");
     }
     return;
@@ -422,31 +413,42 @@ faceMesh.onResults((res) => {
     multiFaceFrames = 0;
   }
 
+  /* =======================
+     LOOKING AWAY DETECTION
+  ======================= */
+  const lm = faces[0];
 
-  const lm = res.multiFaceLandmarks[0];
+  // Stable landmarks
   const nose = lm[1];
   const leftEye = lm[33];
   const rightEye = lm[263];
 
-  const eyeX = (leftEye.x + rightEye.x) / 2;
-  const eyeY = (leftEye.y + rightEye.y) / 2;
+  // Eye center
+  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+  const eyeCenterY = (leftEye.y + rightEye.y) / 2;
 
-  const dx = Math.abs(nose.x - eyeX);
-  const dy = Math.abs(nose.y - eyeY);
+  const dx = Math.abs(nose.x - eyeCenterX);
+  const dy = Math.abs(nose.y - eyeCenterY);
 
-  if (dx > 0.06 || dy > 0.07) lookAwayFrames++;
-  else lookAwayFrames = 0;
+  // Tuned thresholds (safe for most webcams)
+  const LOOK_X_THRESHOLD = 0.055;
+  const LOOK_Y_THRESHOLD = 0.075;
+
+  if (dx > LOOK_X_THRESHOLD || dy > LOOK_Y_THRESHOLD) {
+    lookAwayFrames++;
+  } else {
+    lookAwayFrames = 0;
+  }
 
   if (lookAwayFrames === 25) {
     issueWarning("Please look at the screen");
   }
 });
 
+
 /* ---------- CAMERA PIPELINE ---------- */
 const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
-    if (videoEl.readyState !== 4) return;
-    await faceDetector.send({ image: videoEl });
     await faceMesh.send({ image: videoEl });
   },
   width: 640,
