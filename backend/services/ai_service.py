@@ -128,74 +128,88 @@ RESUME TEXT
             print("❌ AI email extraction failed:", e)
             return None
 
+
+
+    def repair_email_ai(self, resume_text: str, extracted_email: str | None) -> str | None:
+
+        prompt = f"""
+You are a production-grade ATS email correction engine.
+
+TASK:
+You are given resume text and a possibly incorrect email.
+Your job is to return the CORRECT candidate email IF AND ONLY IF it is
+explicitly present in the resume text but broken due to spacing or OCR.
+
+ALLOWED OPERATIONS:
+- Join split username parts (letters + digits)
+- Join numeric fragments with username
+- Remove spaces between username fragments
+- Fix line breaks inside an email
+
+FORBIDDEN:
+- Do NOT invent a new email
+- Do NOT change domain
+- Do NOT guess usernames
+- Do NOT modify letters order
+- Do NOT create email if not present
+
+RULE:
+If the correct email cannot be reconstructed with certainty,
+return EXACTLY:
+NONE
+
+OUTPUT:
+Return ONLY the email or NONE.
+
+RESUME TEXT:
+{resume_text}
+
+CURRENT EMAIL:
+{extracted_email or "NONE"}
+        """
+
+        try:
+            response = self.generate_completion(prompt).strip()
+
+            if response.lower() == "none":
+                return None
+
+        
+            if re.match(
+                r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+                response
+            ):
+                return response
+
+            return None
+
+        except Exception as e:
+            print("❌ AI email repair failed:", e)
+            return None
+
     def extract_email(self, resume_text: str) -> str | None:
         if not resume_text:
             return None
 
-        matches = list(re.finditer(
+        regex_matches = re.findall(
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
             resume_text
-        ))
+        )
 
-        if not matches:
-            return None
+        regex_email = regex_matches[0] if regex_matches else None
 
-        valid_emails = []
+        repaired_email = self.repair_email_ai(resume_text, regex_email)
 
-        for m in matches:
-            email = m.group()
-            start = m.start()
-            i = start - 1
-            prefix = ""
+        if repaired_email:
+            return repaired_email
 
-            while i >= 0 and resume_text[i].isalnum():
-                prefix = resume_text[i] + prefix
-                i -= 1
+        if regex_email:
+            local = regex_email.split("@")[0]
+            if not local.isdigit():
+                return regex_email
 
-      
-            local = email.split("@")[0]
-            if prefix and prefix + local != local:
-                continue  
+        return None
 
-            valid_emails.append(email)
-
-        if not valid_emails:
-            return None
-
-        name = self.extract_name(resume_text) or ""
-        name_tokens = {
-            t.lower()
-            for t in re.findall(r"[a-zA-Z]+", name)
-            if len(t) > 2
-        }
-
-        scored = []
-
-        for email in valid_emails:
-            local = email.split("@")[0].lower()
-            local_tokens = set(re.findall(r"[a-zA-Z]+", local))
-            overlap = len(name_tokens & local_tokens)
-            scored.append((overlap, email))
-
-        scored.sort(reverse=True, key=lambda x: x[0])
-
-        best_score, best_email = scored[0]
-
-   
-        if not name_tokens or best_score > 0:
-            return best_email
-
-
-        ai_email = self.extract_email_ai(resume_text)
-
-        if not ai_email:
-            return None
-
-        local = ai_email.split("@")[0]
-        if local.isdigit():
-            return None
-
-        return ai_email
 
 
 
@@ -529,6 +543,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
