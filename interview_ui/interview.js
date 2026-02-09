@@ -372,7 +372,7 @@ const faceDetector = new FaceDetection({
 });
 
 faceDetector.setOptions({
-   model: 'full',
+   model: 'short',
   minDetectionConfidence: 0.6,
 });
 
