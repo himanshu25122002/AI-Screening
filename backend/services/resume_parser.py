@@ -72,29 +72,17 @@ class ResumeParser:
     def _normalize_email_context(text: str) -> str:
         if not text:
             return ""
-        text = re.sub(r"\s+@\s+", "@", text)
-        text = re.sub(r"\s+\.\s+", ".", text)
 
+   
+        text = re.sub(r"\s+@", "@", text)
+        text = re.sub(r"@\s+", "@", text)
+        text = re.sub(r"\s+\.", ".", text)
+        text = re.sub(r"\.\s+", ".", text)
 
+    
         text = re.sub(
-            r'([a-zA-Z0-9._%+-]+)\s*\n\s*(@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
             r'\1\2',
-            text
-        )
-
-        def fix_numeric_suffix(match):
-            prefix = match.group(1)
-            numeric_email = match.group(2)
-            local = numeric_email.split("@")[0]
-
-            if local.isdigit():
-                return prefix + numeric_email
-
-            return match.group(0)
-
-        text = re.sub(
-            r'([a-zA-Z0-9._%+-]+)\s+([0-9]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
-            fix_numeric_suffix,
             text
         )
 
@@ -194,6 +182,7 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
 
