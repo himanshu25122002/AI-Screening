@@ -77,7 +77,11 @@ class ResumeParser:
         text = re.sub(r"\s+@", "@", text)
         text = re.sub(r"@\s+", "@", text)
         text = re.sub(r"\s+\.\s+", ".", text)
-
+        text = re.sub(
+            r'([a-zA-Z])\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+            r'\1\2',
+            text
+        )
         return text
 
 
@@ -173,6 +177,7 @@ class ResumeParser:
 
 
 resume_parser = ResumeParser()
+
 
 
 
