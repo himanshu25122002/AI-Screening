@@ -132,14 +132,71 @@ RESUME TEXT
         if not resume_text:
             return None
 
-        regex_email = self.extract_email_regex(resume_text)
+        matches = list(re.finditer(
+            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+            resume_text
+        ))
+
+        if not matches:
+            return None
+
+        valid_emails = []
+
+        for m in matches:
+            email = m.group()
+            start = m.start()
+            i = start - 1
+            prefix = ""
+
+            while i >= 0 and resume_text[i].isalnum():
+                prefix = resume_text[i] + prefix
+                i -= 1
+
+      
+            local = email.split("@")[0]
+            if prefix and prefix + local != local:
+                continue  
+
+            valid_emails.append(email)
+
+        if not valid_emails:
+            return None
+
+        name = self.extract_name(resume_text) or ""
+        name_tokens = {
+            t.lower()
+            for t in re.findall(r"[a-zA-Z]+", name)
+            if len(t) > 2
+        }
+
+        scored = []
+
+        for email in valid_emails:
+            local = email.split("@")[0].lower()
+            local_tokens = set(re.findall(r"[a-zA-Z]+", local))
+            overlap = len(name_tokens & local_tokens)
+            scored.append((overlap, email))
+
+        scored.sort(reverse=True, key=lambda x: x[0])
+
+        best_score, best_email = scored[0]
+
+   
+        if not name_tokens or best_score > 0:
+            return best_email
+
+
         ai_email = self.extract_email_ai(resume_text)
 
-        if ai_email:
-            return ai_email
-        return regex_email
+        if not ai_email:
+            return None
 
-        return regex_email or ai_email
+        local = ai_email.split("@")[0]
+        if local.isdigit():
+            return None
+
+        return ai_email
+
 
 
 
@@ -472,6 +529,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
