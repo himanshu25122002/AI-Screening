@@ -112,8 +112,10 @@ def submit_candidate_form(payload: CandidateFormPayload):
     email_service.send_schedule_interview_link(
         payload.candidate_id,
         candidate["email"],
-        candidate["name"]
+        candidate["name"],
+        payload.scheduled_at
     )
+
 
     supabase.table("candidates").update({
         "status": "form_completed",
