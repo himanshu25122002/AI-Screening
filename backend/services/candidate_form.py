@@ -1,5 +1,6 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+import uuid
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr, Field, validator
@@ -109,16 +110,35 @@ def submit_candidate_form(payload: CandidateFormPayload):
             detail="Candidate form already submitted"
         )
 
+    # --------------------------------
+    # 3️⃣ AUTO-SCHEDULE AI INTERVIEW (1 HR)
+    # --------------------------------
+    scheduled_at = datetime.now(timezone.utc)
+    expires_at = scheduled_at + timedelta(hours=1)
+    token = str(uuid.uuid4())
+
+    supabase.table("ai_interview_sessions").insert({
+        "candidate_id": payload.candidate_id,
+        "interview_token": token,
+        "scheduled_at": scheduled_at.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "is_active": True,
+        "created_at": scheduled_at.isoformat()
+    }).execute()
+
+    interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
+
     email_service.send_schedule_interview_link(
         payload.candidate_id,
         candidate["email"],
         candidate["name"],
-        payload.scheduled_at
+        interview_link
     )
 
 
+
     supabase.table("candidates").update({
-        "status": "form_completed",
+        "status": "interview_sent",
         "updated_at": datetime.utcnow().isoformat()
     }).eq("id", payload.candidate_id).execute()
 
