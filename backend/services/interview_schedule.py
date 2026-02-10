@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import uuid
 
 from backend.database import supabase
@@ -9,30 +10,47 @@ from backend.config import config
 
 router = APIRouter()
 
+IST = ZoneInfo("Asia/Kolkata")
+
 
 class InterviewSchedulePayload(BaseModel):
     candidate_id: str
-    scheduled_at: str
+    scheduled_at: str   # ISO string WITH timezone (+05:30)
 
 
 @router.post("/interviews/schedule")
 def schedule_interview(payload: InterviewSchedulePayload):
 
-    # Parse datetime
+    # -------------------------------
+    # 1️⃣ Parse & normalize datetime
+    # -------------------------------
     try:
-        scheduled_dt = datetime.fromisoformat(
-            payload.scheduled_at
-        ).astimezone(timezone.utc)
+        scheduled_ist = datetime.fromisoformat(payload.scheduled_at)
+
+        if scheduled_ist.tzinfo is None:
+            raise ValueError("Timezone missing")
+
+        scheduled_utc = scheduled_ist.astimezone(timezone.utc)
+
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid datetime format")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid datetime format. Timezone required."
+        )
 
-    if scheduled_dt < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="Cannot schedule in the past")
+    if scheduled_utc <= datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot schedule interview in the past"
+        )
 
-    expires_at = scheduled_dt + timedelta(hours=1)
+    expires_at_utc = scheduled_utc + timedelta(hours=1)
+
     token = str(uuid.uuid4())
 
-    # Ensure candidate exists
+    # -------------------------------
+    # 2️⃣ Ensure candidate exists
+    # -------------------------------
     candidate = (
         supabase
         .table("candidates")
@@ -46,33 +64,49 @@ def schedule_interview(payload: InterviewSchedulePayload):
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
 
-    # Insert interview session
+    # -------------------------------
+    # 3️⃣ UPSERT interview session
+    # (1 active session per candidate)
+    # -------------------------------
     supabase.table("ai_interview_sessions").upsert(
         {
             "candidate_id": payload.candidate_id,
             "interview_token": token,
-            "scheduled_at": scheduled_dt.isoformat(),
-            "expires_at": expires_at.isoformat(),
+            "scheduled_at": scheduled_utc.isoformat(),
+            "expires_at": expires_at_utc.isoformat(),
+            "started_at": None,
+            "question_count": 0,
+            "transcript": [],
             "is_active": True,
             "updated_at": datetime.utcnow().isoformat()
         },
         on_conflict="candidate_id"
     ).execute()
 
-
+    # -------------------------------
+    # 4️⃣ Build interview link
+    # -------------------------------
     interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
 
-    # Send interview link email
+    # -------------------------------
+    # 5️⃣ Send email
+    # -------------------------------
     email_service.send_interview_invitation(
         candidate["email"],
         candidate["name"],
         interview_link
     )
 
-    # Update candidate status
+    # -------------------------------
+    # 6️⃣ Update candidate status
+    # -------------------------------
     supabase.table("candidates").update({
         "status": "interview_sent",
         "updated_at": datetime.utcnow().isoformat()
     }).eq("id", payload.candidate_id).execute()
 
-    return {"success": True}
+    return {
+        "success": True,
+        "scheduled_at_ist": scheduled_ist.isoformat(),
+        "expires_at_ist": expires_at_utc.astimezone(IST).isoformat()
+    }
