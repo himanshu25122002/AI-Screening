@@ -518,7 +518,7 @@ if (deltaX > MAX_DELTA_X || deltaY > MAX_DELTA_Y) {
 if (lookAwayFrames >= 45) {
   issueWarning("Please look at the screen");
 }
-
+});  
 
 
 /* ---------- CAMERA PIPELINE ---------- */
