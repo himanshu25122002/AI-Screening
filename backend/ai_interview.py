@@ -20,11 +20,14 @@ MAX_QUESTIONS = 5
 class InterviewPayload(BaseModel):
     candidate_id: str
     answer: str | None = None
-
+class TokenPayload(BaseModel):
+    token: str
 
 
 @router.post("/ai-interview/validate")
-def validate_interview(token: str):
+def validate_interview(payload: TokenPayload):
+    token = payload.token
+
     res = (
         supabase
         .table("ai_interview_sessions")
@@ -38,7 +41,6 @@ def validate_interview(token: str):
         raise HTTPException(status_code=403, detail="Invalid interview link")
 
     session = res.data[0]
-
     now = datetime.now(timezone.utc)
 
     scheduled_at = session.get("scheduled_at")
