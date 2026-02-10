@@ -28,51 +28,65 @@ class TokenPayload(BaseModel):
 
 
 
+
+
 @router.post("/ai-interview/validate")
 def validate_interview(payload: TokenPayload):
     token = payload.token
 
+    # 1️⃣ Fetch ONLY active session
     res = (
         supabase
         .table("ai_interview_sessions")
         .select("*")
         .eq("interview_token", token)
+        .eq("is_active", True)   # 🔥 CRITICAL
+        .single()
         .execute()
     )
 
     if not res.data:
-        raise HTTPException(status_code=403, detail="Invalid interview link")
+        raise HTTPException(
+            status_code=403,
+            detail="Interview link is invalid or expired"
+        )
 
-    session = res.data[0]
+    session = res.data
 
-    # ⏱ ALWAYS UTC
+    # 2️⃣ Current time (UTC)
     now_utc = datetime.now(timezone.utc)
 
-    scheduled_at = session["scheduled_at"]
-    expires_at = session["expires_at"]
+    # 3️⃣ Parse DB times → UTC AWARE
+    scheduled_at_utc = datetime.fromisoformat(
+        session["scheduled_at"].replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
 
-    scheduled_at_dt = datetime.fromisoformat(
-        scheduled_at.replace("Z", "+00:00")
-    )
-    expires_at_dt = datetime.fromisoformat(
-        expires_at.replace("Z", "+00:00")
-    )
+    expires_at_utc = datetime.fromisoformat(
+        session["expires_at"].replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
 
-    if now_utc < scheduled_at_dt:
-        raise HTTPException(status_code=403, detail="Interview has not started yet")
+    # 4️⃣ BEFORE TIME
+    if now_utc < scheduled_at_utc:
+        raise HTTPException(
+            status_code=403,
+            detail="Interview has not started yet"
+        )
 
-    if now_utc > expires_at_dt:
+    # 5️⃣ AFTER EXPIRY
+    if now_utc > expires_at_utc:
         supabase.table("ai_interview_sessions").update({
             "is_active": False
         }).eq("id", session["id"]).execute()
 
-        raise HTTPException(status_code=403, detail="Interview expired")
+        raise HTTPException(
+            status_code=403,
+            detail="Interview link has expired"
+        )
 
-    # ✅ Mark started ONCE
+    # 6️⃣ Mark started ONCE
     if not session.get("started_at"):
         supabase.table("ai_interview_sessions").update({
-            "started_at": now_utc.isoformat(),
-            "is_active": True
+            "started_at": now_utc.isoformat()
         }).eq("id", session["id"]).execute()
 
     return {
