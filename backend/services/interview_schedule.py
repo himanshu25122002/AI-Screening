@@ -20,32 +20,42 @@ class InterviewSchedulePayload(BaseModel):
 
 from zoneinfo import ZoneInfo
 
+from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
+
+IST = ZoneInfo("Asia/Kolkata")
+
 @router.post("/interviews/schedule")
 def schedule_interview(payload: InterviewSchedulePayload):
 
-    IST = ZoneInfo("Asia/Kolkata")
-
     try:
-        # 👇 treat input as IST
+        # 🔥 Treat incoming time as IST
         scheduled_ist = datetime.fromisoformat(payload.scheduled_at).replace(tzinfo=IST)
-        scheduled_utc = scheduled_ist.astimezone(timezone.utc)
+
+        # 🔁 Convert to UTC for storage
+        scheduled_dt = scheduled_ist.astimezone(timezone.utc)
+
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid datetime format")
 
-    if scheduled_utc < datetime.now(timezone.utc):
+    if scheduled_dt < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Cannot schedule in the past")
 
-    expires_at = scheduled_utc + timedelta(hours=1)
+    expires_at = scheduled_dt + timedelta(hours=1)
     token = str(uuid.uuid4())
 
-    supabase.table("ai_interview_sessions").upsert({
-        "candidate_id": payload.candidate_id,
-        "interview_token": token,
-        "scheduled_at": scheduled_utc.isoformat(),
-        "expires_at": expires_at.isoformat(),
-        "is_active": True,
-        "updated_at": datetime.utcnow().isoformat()
-    }, on_conflict="candidate_id").execute()
+    supabase.table("ai_interview_sessions").upsert(
+        {
+            "candidate_id": payload.candidate_id,
+            "interview_token": token,
+            "scheduled_at": scheduled_dt.isoformat(),  
+            "expires_at": expires_at.isoformat(),     
+            "is_active": True,
+            "updated_at": datetime.utcnow().isoformat()
+        },
+        on_conflict="candidate_id"
+    ).execute()
+
 
     interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
 
