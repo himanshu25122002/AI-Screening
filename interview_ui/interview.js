@@ -417,9 +417,14 @@ function issueWarning(reason) {
   lastWarningTime = now();
 
   interviewPaused = true;
-  speechSynthesis.cancel();
+  interviewPausedForFullscreen = true;
+
   hardStopTTS("warning");
   clearInterval(timerInterval);
+
+  // 🔥 FORCE FULLSCREEN OVERLAY EVEN IF ALREADY PAUSED
+  const overlay = document.getElementById("fullscreenOverlay");
+  if (overlay) overlay.style.display = "flex";
 
   setTimeout(() => {
     alert(`⚠️ Warning ${warnings}/${MAX_WARNINGS}\n${reason}`);
@@ -429,6 +434,7 @@ function issueWarning(reason) {
     terminateInterview("Interview terminated due to repeated violations.");
   }
 }
+
 
 
 
