@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from openai import OpenAI
@@ -22,11 +22,53 @@ class InterviewPayload(BaseModel):
     answer: str | None = None
 
 
+
+@router.post("/ai-interview/validate")
+def validate_interview(token: str):
+    res = (
+        supabase
+        .table("ai_interview_sessions")
+        .select("*")
+        .eq("interview_token", token)
+        .eq("is_active", True)
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(status_code=403, detail="Invalid interview link")
+
+    session = res.data[0]
+
+    expires_at = session.get("expires_at")
+    if not expires_at:
+        raise HTTPException(status_code=403, detail="Interview link expired")
+
+    # SAFE timezone-aware comparison
+    expires_at_dt = datetime.fromisoformat(
+        expires_at.replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
+
+    if expires_at_dt < datetime.now(timezone.utc):
+        supabase.table("ai_interview_sessions").update({
+            "is_active": False
+        }).eq("id", session["id"]).execute()
+
+        raise HTTPException(status_code=403, detail="Interview link expired")
+
+    return {
+        "success": True,
+        "candidate_id": session["candidate_id"]
+    }
+
+
+
 # =====================================================
 # NEXT QUESTION
 # =====================================================
 @router.post("/ai-interview/next")
 def next_question(payload: InterviewPayload):
+    if not session.get("is_active"):
+        raise HTTPException(status_code=403, detail="Interview session inactive")
 
     # 1️⃣ Load or create session
     session_res = (
