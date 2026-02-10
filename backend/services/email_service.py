@@ -57,7 +57,14 @@ class EmailService:
 
 
 
-    def send_schedule_interview_link(candidate_id: str, email: str, name: str):
+    def send_schedule_interview_link(
+        self,
+        candidate_id: str,
+        email: str,
+        name: str,
+        scheduled_at: str
+    ):
+        
         schedule_link = f"{config.FRONTEND_URL}/schedule?candidate_id={candidate_id}"
 
         subject = "Schedule Your AI Interview"
@@ -86,10 +93,11 @@ Hiring Team
         candidate_name: str,
         interview_link: str
     ):
+        interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
 
         subject = "AI Interview Invitation – Futuready"
 
-
+    
         html_content = f"""
         <html>
         <body>
@@ -244,6 +252,7 @@ Hiring Team
 
 
 email_service = EmailService()
+
 
 
 
