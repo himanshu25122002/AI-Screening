@@ -1,49 +1,116 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, validator
 
 from backend.database import supabase
 from backend.services.email_service import email_service
-from backend.config import config
 
 router = APIRouter()
 
+# ================================
+# Payload Schema (STRICT)
+# ================================
 
-# ================================
-# Payload Schema
-# ================================
 class CandidateFormPayload(BaseModel):
     candidate_id: str
-    availability: Optional[str] = None
-    salary_expectations: Optional[str] = None
-    portfolio_links: List[str] = []
-    skill_self_assessment: Optional[str] = None
-    additional_info: Optional[str] = None
-    form_submitted_at: Optional[str] = None
+
+    # Personal Details
+    first_name: str = Field(..., min_length=1)
+    last_name: str = Field(..., min_length=1)
+
+    gender: str
+    age: int = Field(..., ge=18, le=60)
+
+    email: EmailStr
+    phone: str = Field(..., regex=r"^[0-9]{10,15}$")
+
+    address: str
+    city: str
+    state: str
+
+    # Professional Details
+    years_of_experience: int = Field(..., ge=0)
+    current_ctc: int = Field(..., ge=0)
+    expected_ctc: int = Field(..., ge=0)
+    notice_period: int = Field(..., ge=0)
+
+    portfolio_link: Optional[str] = None
+
+    @validator("gender")
+    def validate_gender(cls, v):
+        if v not in ["Male", "Female", "Other"]:
+            raise ValueError("Invalid gender")
+        return v
+
+    @validator("portfolio_link")
+    def validate_portfolio_link(cls, v):
+        if v and not v.startswith("https://"):
+            raise ValueError("Portfolio link must start with https://")
+        return v
 
 
 # ================================
 # Submit Candidate Form
 # ================================
+
 @router.post("/candidate-form/submit")
 def submit_candidate_form(payload: CandidateFormPayload):
     # --------------------------------
-    # 1️⃣ Always save form first (NO FAIL)
+    # 1️⃣ Check candidate exists
     # --------------------------------
-    supabase.table("candidate_forms").insert({
-        "candidate_id": payload.candidate_id,
-        "availability": payload.availability,
-        "salary_expectations": payload.salary_expectations,
-        "portfolio_links": payload.portfolio_links,
-        "skill_self_assessment": payload.skill_self_assessment,
-        "additional_info": payload.additional_info,
-        "form_submitted_at": payload.form_submitted_at or datetime.utcnow().isoformat()
-    }).execute()
+    candidate = (
+        supabase
+        .table("candidates")
+        .select("id, email, name")
+        .eq("id", payload.candidate_id)
+        .single()
+        .execute()
+        .data
+    )
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
 
     # --------------------------------
-    # 2️⃣ Update candidate status safely
+    # 2️⃣ Insert form (ONE per candidate)
+    # --------------------------------
+    try:
+        supabase.table("candidate_forms").insert({
+            "candidate_id": payload.candidate_id,
+
+            "first_name": payload.first_name.strip(),
+            "last_name": payload.last_name.strip(),
+
+            "gender": payload.gender,
+            "age": payload.age,
+
+            "email": payload.email.lower(),
+            "phone": payload.phone,
+
+            "address": payload.address,
+            "city": payload.city,
+            "state": payload.state,
+
+            "years_of_experience": payload.years_of_experience,
+            "current_ctc": payload.current_ctc,
+            "expected_ctc": payload.expected_ctc,
+            "notice_period": payload.notice_period,
+
+            "portfolio_link": payload.portfolio_link,
+            "created_at": datetime.utcnow().isoformat(),
+        }).execute()
+
+    except Exception as e:
+        # Most likely UNIQUE constraint violation
+        raise HTTPException(
+            status_code=400,
+            detail="Candidate form already submitted"
+        )
+
+    # --------------------------------
+    # 3️⃣ Update candidate status
     # --------------------------------
     supabase.table("candidates").update({
         "status": "form_completed",
@@ -51,48 +118,39 @@ def submit_candidate_form(payload: CandidateFormPayload):
     }).eq("id", payload.candidate_id).execute()
 
     # --------------------------------
-    # 3️⃣ Try sending AI interview email (NON-BLOCKING)
+    # 4️⃣ Send AI interview email (NON-BLOCKING)
     # --------------------------------
     try:
-        candidate = (
-            supabase.table("candidates")
-            .select("email, name")
-            .eq("id", payload.candidate_id)
-            .single()
-            .execute()
-            .data
-        )
-
-
-
         email_service.send_interview_invitation(
             payload.candidate_id,
             candidate["email"],
             candidate["name"]
         )
 
-        # update status only if mail sent
         supabase.table("candidates").update({
             "status": "interview_sent",
             "updated_at": datetime.utcnow().isoformat()
         }).eq("id", payload.candidate_id).execute()
 
     except Exception as e:
-        # 🔥 DO NOT FAIL FORM SUBMISSION
+        # Never fail form submission
         print("⚠️ Interview email failed:", e)
 
     # --------------------------------
-    # 4️⃣ Always return success
+    # 5️⃣ Always return success
     # --------------------------------
     return {"success": True}
+
 
 # ================================
 # Check Candidate Form Status
 # ================================
+
 @router.get("/candidate-form/status")
 def candidate_form_status(candidate_id: str):
     candidate = (
-        supabase.table("candidates")
+        supabase
+        .table("candidates")
         .select("status")
         .eq("id", candidate_id)
         .single()
@@ -112,13 +170,19 @@ def candidate_form_status(candidate_id: str):
         ]
     }
 
+
+# ================================
+# Admin: List All Candidate Forms
+# ================================
+
 @router.get("/candidate-form/all")
 def list_all_candidate_forms():
     result = (
         supabase
         .table("candidate_forms")
         .select("*")
-        .order("form_submitted_at", desc=True)
+        .order("created_at", desc=True)
         .execute()
     )
+
     return {"success": True, "data": result.data}
