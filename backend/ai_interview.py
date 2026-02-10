@@ -49,13 +49,13 @@ def validate_interview(payload: TokenPayload):
     if not scheduled_at or not expires_at:
         raise HTTPException(status_code=403, detail="Interview not scheduled properly")
 
-    scheduled_at_dt = datetime.fromisoformat(
-        scheduled_at.replace("Z", "+00:00")
-    ).astimezone(timezone.utc)
+    def to_utc(dt):
+        if isinstance(dt, str):
+            return datetime.fromisoformat(dt.replace("Z", "+00:00")).astimezone(timezone.utc)
+        return dt.astimezone(timezone.utc)
 
-    expires_at_dt = datetime.fromisoformat(
-        expires_at.replace("Z", "+00:00")
-    ).astimezone(timezone.utc)
+    scheduled_at_dt = to_utc(scheduled_at)
+    expires_at_dt = to_utc(expires_at)
 
     if now < scheduled_at_dt:
         raise HTTPException(status_code=403, detail="Interview has not started yet")
@@ -67,10 +67,16 @@ def validate_interview(payload: TokenPayload):
 
         raise HTTPException(status_code=403, detail="Interview link expired")
 
+    # ✅ CRITICAL FIX
+    supabase.table("ai_interview_sessions").update({
+        "started_at": session.get("started_at") or now.isoformat()
+    }).eq("id", session["id"]).execute()
+
     return {
         "success": True,
         "candidate_id": session["candidate_id"]
     }
+
 
 
 
