@@ -47,7 +47,9 @@ if candidate_id:
             scheduled_time
         )
 
-        if scheduled_datetime <= datetime.utcnow():
+        scheduled_datetime_utc = scheduled_datetime.astimezone()
+
+        if scheduled_datetime_utc <= datetime.utcnow().astimezone():
             st.error("❌ Please select a future date and time")
             st.stop()
 
@@ -56,7 +58,7 @@ if candidate_id:
             f"{BACKEND_URL}/interviews/schedule",
             json={
                 "candidate_id": candidate_id,
-                "scheduled_at": scheduled_datetime.isoformat()
+                "scheduled_at": scheduled_datetime_utc.isoformat()
             },
             timeout=60
         )
@@ -460,6 +462,7 @@ if page == "📝 Candidate Forms":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
