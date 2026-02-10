@@ -80,40 +80,47 @@ Hiring Team
     # ======================================================
     # 2️⃣ AI INTERVIEW INVITE (AUTO LINK)
     # ======================================================
-    def send_interview_invitation( self, candidate_id: str, candidate_email: str, candidate_name: str):
+    def send_interview_invitation(
+        self,
+        candidate_email: str,
+        candidate_name: str,
+        interview_link: str
+    ):
+
         subject = "AI Interview Invitation – Futuready"
 
-        interview_link = (
-            f"https://ai-screening-six.vercel.app/index.html"
-            f"?candidate_id={candidate_id}"
-        )
 
         html_content = f"""
         <html>
         <body>
-            <h2>Hello {candidate_name},</h2>
+          <h2>Hello {candidate_name},</h2>
 
-            <p>You are invited to an <strong>AI-powered interview</strong>.</p>
+          <p>You are invited to an <strong>AI-powered interview</strong>.</p>
 
+          <p>
             <a href="{interview_link}"
-               style="padding:12px 24px;background:#2196F3;color:#fff;text-decoration:none;border-radius:4px;">
-               Start AI Interview
+               style="padding:12px 24px;background:#2196F3;color:#fff;
+                      text-decoration:none;border-radius:4px;">
+              Start AI Interview
             </a>
+          </p>
 
-            <p><b>Important:</b> This link is unique. Do not share it.</p>
+          <p><b>Important:</b> This link is valid for <b>1 hour only</b> and can be used once.</p>
 
-            <p>Best regards,<br>Futuready HR</p>
+          <p>Best regards,<br>Futuready HR</p>
         </body>
         </html>
         """
 
+
         return self._send_email(
-            candidate_id,
+            None,
             candidate_email,
             subject,
             html_content,
             "interview_invite"
         )
+
 
     # ======================================================
     # 3️⃣ FINAL INTERVIEW (CALENDLY – AUTO)
@@ -237,6 +244,7 @@ Hiring Team
 
 
 email_service = EmailService()
+
 
 
 
