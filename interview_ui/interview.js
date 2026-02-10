@@ -18,7 +18,6 @@ const API_BASE = "https://ai-screening-wbb0.onrender.com";
 const params = new URLSearchParams(window.location.search);
 const token = params.get("token");
 
-let candidateId = null;
 
 if (!token) {
   alert("Invalid interview link");
@@ -38,10 +37,6 @@ const MAX_TAB_SWITCH = 3;
 const MAX_CAMERA_FAIL = 3;
 let interviewStarted = false;
 
-if (!candidateId) {
-  alert("Missing candidate_id");
-  throw new Error("candidate_id missing");
-}
 
 async function validateInterviewToken() {
   const res = await fetch(`${API_BASE}/ai-interview/validate`, {
