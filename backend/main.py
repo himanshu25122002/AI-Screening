@@ -24,16 +24,23 @@ from backend.services.interview_schedule import router as interview_schedule_rou
 
 
 app = FastAPI(title="AI Candidate Screening API", version="1.0.0")
-app.include_router(interview_schedule_router)
-app.include_router(interview_router)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://ai-screening-six.vercel.app",  
+        "http://localhost:3000",                
+        "http://localhost:8501"             
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(interview_schedule_router)
+app.include_router(interview_router)
 app.include_router(candidate_form_router)
+
 @app.get("/")
 def read_root():
     return {
@@ -520,6 +527,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
