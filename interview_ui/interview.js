@@ -231,7 +231,7 @@ async function fetchQuestion(answer = null) {
 
     submitBtn.disabled = false;
     submitBtn.innerText = "Submit";
-    showQuestion(data.question);
+    showQuestion(data.question, true);
 
   } catch (e) {
     submitBtn.disabled = false;
@@ -241,7 +241,7 @@ async function fetchQuestion(answer = null) {
 }
 
 /* ================= DISPLAY QUESTION ================= */
-function showQuestion(q) {
+function showQuestion(q, isFirst = false)) {
   if (interviewCompleted) return;
 
   questionEl.innerText = q;
@@ -251,9 +251,18 @@ function showQuestion(q) {
 
   setState("asking");
 
-  speak(q, () => {
-    if (!interviewCompleted) startTimer();
-  });
+  if (isFirst) {
+    speak(q, () => {
+      setTimeout(() => {
+        if (!interviewCompleted) startTimer();
+      }, 500);
+    });
+  } else {
+    speak(q, () => {
+      if (!interviewCompleted) startTimer();
+    });
+  }
+  
 }
 
 /* ================= SUBMIT ================= */
@@ -424,7 +433,20 @@ faceMesh.onResults((res) => {
     multiFaceFrames = 0;
   }
 
+const lm = faces[0];
 
+// stable landmarks
+const nose = lm[1];
+const leftEye = lm[33];
+const rightEye = lm[263];
+
+// eye center
+const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+
+// raw deltas
+const dx = Math.abs(nose.x - eyeCenterX);
+const dy = Math.abs(nose.y - eyeCenterY);
 if (!calibrated) {
   baseDx += dx;
   baseDy += dy;
@@ -453,17 +475,17 @@ const deltaX = Math.abs(avgDx - baseDx);
 const deltaY = Math.abs(avgDy - baseDy);
 
 // relaxed human-safe limits
-const MAX_DELTA_X = 0.12;
-const MAX_DELTA_Y = 0.15;
+const MAX_DELTA_X = 0.18;
+const MAX_DELTA_Y = 0.20;
 
 // sustained violation only
 if (deltaX > MAX_DELTA_X || deltaY > MAX_DELTA_Y) {
   lookAwayFrames++;
 } else {
-  lookAwayFrames = Math.max(0, lookAwayFrames - 2);
+  lookAwayFrames = Math.max(0, lookAwayFrames - 4);
 }
 
-if (lookAwayFrames === 40) {
+if (lookAwayFrames >= 45) {
   issueWarning("Please look at the screen");
 }
 
