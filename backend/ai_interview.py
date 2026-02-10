@@ -17,8 +17,6 @@ client = OpenAI(api_key=config.OPENAI_API_KEY)
 MAX_QUESTIONS = 5
 
 
-IST = ZoneInfo("Asia/Kolkata")
-
 
 class InterviewPayload(BaseModel):
     candidate_id: str
@@ -29,11 +27,14 @@ class TokenPayload(BaseModel):
     token: str
 
 
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
+
 @router.post("/ai-interview/validate")
 def validate_interview(payload: TokenPayload):
     token = payload.token
 
-    # 1️⃣ Fetch active interview session
     res = (
         supabase
         .table("ai_interview_sessions")
@@ -48,36 +49,30 @@ def validate_interview(payload: TokenPayload):
 
     session = res.data[0]
 
-    # 2️⃣ Current time in IST
-    now = datetime.now(IST)
+    now_utc = datetime.now(timezone.utc)
 
-    scheduled_at = session.get("scheduled_at")
-    expires_at = session.get("expires_at")
+    scheduled_at_dt = datetime.fromisoformat(
+        session["scheduled_at"].replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
 
-    if not scheduled_at or not expires_at:
-        raise HTTPException(status_code=403, detail="Interview not scheduled properly")
+    expires_at_dt = datetime.fromisoformat(
+        session["expires_at"].replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
 
-    # 3️⃣ Parse DB timestamps as IST
-    scheduled_at_dt = datetime.fromisoformat(scheduled_at).astimezone(IST)
-    expires_at_dt = datetime.fromisoformat(expires_at).astimezone(IST)
-
-    # 4️⃣ Time validation (IST vs IST)
-    if now < scheduled_at_dt:
+    if now_utc < scheduled_at_dt:
         raise HTTPException(status_code=403, detail="Interview has not started yet")
 
-    if now > expires_at_dt:
+    if now_utc > expires_at_dt:
         supabase.table("ai_interview_sessions").update({
             "is_active": False
         }).eq("id", session["id"]).execute()
 
         raise HTTPException(status_code=403, detail="Interview link expired")
 
-    # 5️⃣ Mark interview started (only once)
-    if not session.get("started_at"):
-        supabase.table("ai_interview_sessions").update({
-            "started_at": now.isoformat(),
-            "updated_at": now.isoformat()
-        }).eq("id", session["id"]).execute()
+    # mark started (once)
+    supabase.table("ai_interview_sessions").update({
+        "started_at": session.get("started_at") or now_utc.isoformat()
+    }).eq("id", session["id"]).execute()
 
     return {
         "success": True,
