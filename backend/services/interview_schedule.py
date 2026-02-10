@@ -47,13 +47,18 @@ def schedule_interview(payload: InterviewSchedulePayload):
         raise HTTPException(status_code=404, detail="Candidate not found")
 
     # Insert interview session
-    supabase.table("ai_interview_sessions").insert({
-        "candidate_id": payload.candidate_id,
-        "interview_token": token,
-        "scheduled_at": scheduled_dt.isoformat(),
-        "expires_at": expires_at.isoformat(),
-        "is_active": True
-    }).execute()
+    supabase.table("ai_interview_sessions").upsert(
+        {
+            "candidate_id": payload.candidate_id,
+            "interview_token": token,
+            "scheduled_at": scheduled_dt.isoformat(),
+            "expires_at": expires_at.isoformat(),
+            "is_active": True,
+            "updated_at": datetime.utcnow().isoformat()
+        },
+        on_conflict="candidate_id"
+    ).execute()
+
 
     interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
 
