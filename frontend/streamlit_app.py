@@ -353,6 +353,25 @@ if page == "📝 Candidate Forms":
         how="left",
         suffixes=("_form", "_candidate")
     )
+    # -------------------------------
+    # Ensure required columns exist
+    # -------------------------------
+    required_columns = [
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "years_of_experience",
+        "current_ctc",
+        "expected_ctc",
+        "notice_period",
+        "portfolio_link",
+        "created_at",
+    ]
+
+    for col in required_columns:
+        if col not in df.columns:
+            df[col] = None
 
     df["Job Name"] = df["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
 
@@ -422,6 +441,7 @@ if page == "📝 Candidate Forms":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
