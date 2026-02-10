@@ -55,6 +55,28 @@ class EmailService:
             "form_invite"
         )
 
+
+
+    def send_schedule_interview_link(candidate_id: str, email: str, name: str):
+        schedule_link = f"{config.FRONTEND_URL}/schedule?candidate_id={candidate_id}"
+
+        subject = "Schedule Your AI Interview"
+        body = f"""
+Hi {name},
+
+Thank you for submitting your application.
+
+Please schedule your AI interview using the link below:
+{schedule_link}
+
+Once scheduled, your interview link will be active for 1 hour only.
+
+Best regards,
+Hiring Team
+"""
+
+        send_email(email, subject, body)
+
     # ======================================================
     # 2️⃣ AI INTERVIEW INVITE (AUTO LINK)
     # ======================================================
@@ -215,6 +237,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
