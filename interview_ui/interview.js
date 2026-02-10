@@ -417,10 +417,7 @@ function issueWarning(reason) {
   lastWarningTime = now();
 
   interviewPaused = true;
-
-  
-  speechSynthesis.cancel();  
-
+  speechSynthesis.cancel();
   hardStopTTS("warning");
   clearInterval(timerInterval);
 
@@ -432,6 +429,7 @@ function issueWarning(reason) {
     terminateInterview("Interview terminated due to repeated violations.");
   }
 }
+
 
 
 
