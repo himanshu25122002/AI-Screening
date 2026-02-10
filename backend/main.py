@@ -212,19 +212,19 @@ def get_candidate(candidate_id: str):
             .table("candidate_forms")
             .select("*")
             .eq("candidate_id", candidate_id)
-            .maybeSingle()
+            .Single()
             .execute()
         )
-
+        form_data = form_res.data[0] if form_res.data else None
         interview_data = (
             supabase
             .table("ai_interviews")
             .select("*")
             .eq("candidate_id", candidate_id)
-            .maybeSingle()
+            .Single()
             .execute()
         )
-
+        interview_data = interview_res.data[0] if interview_res.data else None
         return {
             "success": True,
             "data": {
@@ -352,7 +352,7 @@ def get_interview(candidate_id: str):
         result = supabase.table("ai_interviews")\
             .select("*")\
             .eq("candidate_id", candidate_id)\
-            .maybeSingle()\
+            .Single()\
             .execute()
 
         if not result.data:
@@ -515,6 +515,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
