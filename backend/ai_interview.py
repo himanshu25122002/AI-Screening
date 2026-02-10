@@ -39,16 +39,26 @@ def validate_interview(token: str):
 
     session = res.data[0]
 
-    expires_at = session.get("expires_at")
-    if not expires_at:
-        raise HTTPException(status_code=403, detail="Interview link expired")
+    now = datetime.now(timezone.utc)
 
-    # SAFE timezone-aware comparison
+    scheduled_at = session.get("scheduled_at")
+    expires_at = session.get("expires_at")
+
+    if not scheduled_at or not expires_at:
+        raise HTTPException(status_code=403, detail="Interview not scheduled properly")
+
+    scheduled_at_dt = datetime.fromisoformat(
+        scheduled_at.replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
+
     expires_at_dt = datetime.fromisoformat(
         expires_at.replace("Z", "+00:00")
     ).astimezone(timezone.utc)
 
-    if expires_at_dt < datetime.now(timezone.utc):
+    if now < scheduled_at_dt:
+        raise HTTPException(status_code=403, detail="Interview has not started yet")
+
+    if now > expires_at_dt:
         supabase.table("ai_interview_sessions").update({
             "is_active": False
         }).eq("id", session["id"]).execute()
@@ -67,35 +77,29 @@ def validate_interview(token: str):
 # =====================================================
 @router.post("/ai-interview/next")
 def next_question(payload: InterviewPayload):
-    if not session.get("is_active"):
-        raise HTTPException(status_code=403, detail="Interview session inactive")
+    
 
     # 1️⃣ Load or create session
     session_res = (
-        supabase.table("ai_interview_sessions")
+        supabase
+        .table("ai_interview_sessions")
         .select("*")
         .eq("candidate_id", payload.candidate_id)
+        .eq("is_active", True)
         .execute()
     )
 
-    session = session_res.data[0] if session_res.data else None
+    if not session_res.data:
+        raise HTTPException(status_code=403, detail="Interview session inactive")
+
+    session = session_res.data[0]
 
 
 
     if session:
         question_count = session["question_count"]
         transcript = session.get("transcript", [])
-    else:
-        question_count = 0
-        transcript = []
-
-
-        supabase.table("ai_interview_sessions").insert({
-            "candidate_id": payload.candidate_id,
-            "question_count": 0,
-            "transcript": [],
-            "started_at": datetime.utcnow().isoformat()
-        }).execute()
+    
 
     # 2️⃣ Stop if interview completed
     # Stop if interview finished
@@ -419,7 +423,8 @@ RETURN STRICT JSON ONLY:
         "overall_score": evaluation["overall_score"],
         "recommendation": evaluation["recommendation"],
         "evaluation_notes": evaluation["evaluation_notes"],
-        "started_at": session["started_at"],
+        "started_at": session.get("started_at") or session["scheduled_at"],
+
         "completed_at": datetime.utcnow().isoformat()
     }).execute()
 
@@ -435,17 +440,19 @@ RETURN STRICT JSON ONLY:
         "updated_at": datetime.utcnow().isoformat()
     }).eq("id", payload.candidate_id).execute()
 
+    supabase.table("ai_interview_sessions").update({
+        "is_active": False
+    }).eq("candidate_id", payload.candidate_id).execute()
+
     # 5️⃣ Auto-Calendly
     if evaluation["overall_score"] >= 80:
         try:
             email_service.send_final_interview_schedule(
                 payload.candidate_id,
                 candidate["email"],
-                candidate["name"],
-                "Final Interview",
-                "Online",
-                config.CALENDLY_LINK
+                candidate["name"]
             )
+
         except Exception as e:
             print("⚠️ Calendly email failed:", e)
 
