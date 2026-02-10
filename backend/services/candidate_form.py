@@ -24,7 +24,7 @@ class CandidateFormPayload(BaseModel):
     age: int = Field(..., ge=18, le=60)
 
     email: EmailStr
-    phone: str = Field(..., regex=r"^[0-9]{10,15}$")
+    phone: str = Field(..., pattern=r"^[0-9]{10,15}$")
 
     address: str
     city: str
