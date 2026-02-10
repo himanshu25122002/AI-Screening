@@ -52,8 +52,7 @@ def schedule_interview(payload: InterviewSchedulePayload):
         "interview_token": token,
         "scheduled_at": scheduled_dt.isoformat(),
         "expires_at": expires_at.isoformat(),
-        "is_active": True,
-        "created_at": datetime.utcnow().isoformat()
+        "is_active": True
     }).execute()
 
     interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
