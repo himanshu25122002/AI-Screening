@@ -61,22 +61,39 @@ class EmailService:
         self,
         candidate_id: str,
         email: str,
-        name: str,
-        interview_link: str
+        name: str
     ):
-        subject = "Your AI Interview Link (Valid for 1 Hour)"
+
+        subject = "Schedule Your AI Interview – Futuready"
+
+        schedule_link = (
+            f"{config.FRONTEND_URL}/schedule-interview"
+            f"?candidate_id={candidate_id}"
+        )
 
         html_content = f"""
         <html>
           <body>
             <h3>Hello {name},</h3>
-            <p>Your AI interview is ready.</p>
+
+            <p>Thank you for completing your application.</p>
+
+            <p>Please schedule your <strong>AI interview</strong> using the link below:</p>
+
             <p>
-              <a href="{interview_link}">
-                Start AI Interview
+              <a href="{schedule_link}"
+                 style="padding:12px 24px;background:#FF9800;color:#fff;
+                        text-decoration:none;border-radius:4px;">
+                Schedule AI Interview
               </a>
             </p>
-            <p><b>Note:</b> This link is valid for <b>1 hour only</b>.</p>
+
+            <p>
+              After scheduling, you will receive a separate email containing your
+              AI interview link.
+            </p>
+
+            <p>Best regards,<br>Futuready HR</p>
           </body>
         </html>
         """
@@ -258,6 +275,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
