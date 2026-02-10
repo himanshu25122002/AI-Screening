@@ -24,7 +24,9 @@ class Config:
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:8501")
     GOOGLE_FORM_URL = os.getenv("GOOGLE_FORM_URL")
     CALENDLY_LINK = os.getenv("CALENDLY_LINK")
+    INTERVIEW_UI_URL = "https://ai-screening-six.vercel.app/index.html"
 
 
 config = Config()
+
 
