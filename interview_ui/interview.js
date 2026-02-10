@@ -271,7 +271,7 @@ async function fetchQuestion(answer = null) {
 }
 
 /* ================= DISPLAY QUESTION ================= */
-function showQuestion(q, isFirst = false)) {
+function showQuestion(q, isFirst = false) {
   if (interviewCompleted) return;
 
   questionEl.innerText = q;
