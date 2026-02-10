@@ -14,25 +14,35 @@ def render():
         st.error("Invalid scheduling link")
         st.stop()
 
-    st.info("Choose a date and time for your AI interview. The interview link will be valid for **1 hour** from the scheduled time.")
+    st.info(
+        "Choose a date and time for your AI interview. "
+        "The interview link will be valid for **1 hour** from the scheduled time."
+    )
 
-    date = st.date_input("Interview Date")
-    time_val = st.time_input("Interview Time", time(10, 0))
+    interview_date = st.date_input("Interview Date")
+    interview_time = st.time_input("Interview Time", time(10, 0))
 
     if st.button("✅ Schedule Interview"):
-        scheduled_at = datetime.combine(date, time_val).isoformat()
+        scheduled_at = datetime.combine(
+            interview_date,
+            interview_time
+        ).isoformat()
 
         with st.spinner("Scheduling your interview..."):
             r = requests.post(
                 f"{BACKEND_URL}/interviews/schedule",
-                params={
+                json={   # ✅ IMPORTANT: JSON BODY
                     "candidate_id": candidate_id,
                     "scheduled_at": scheduled_at
-                }
+                },
+                timeout=60
             )
 
         if r.status_code == 200:
             st.success("🎉 Interview scheduled successfully!")
             st.success("📧 Check your email for the interview link.")
         else:
-            st.error(r.json().get("detail", "Failed to schedule interview"))
+            try:
+                st.error(r.json().get("detail", "Failed to schedule interview"))
+            except Exception:
+                st.error("Failed to schedule interview")
