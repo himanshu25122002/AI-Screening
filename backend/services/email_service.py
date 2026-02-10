@@ -64,7 +64,7 @@ class EmailService:
         name: str,
         scheduled_at: str
     ):
-        
+        interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
         schedule_link = f"{config.FRONTEND_URL}/schedule?candidate_id={candidate_id}"
 
         subject = "Schedule Your AI Interview"
@@ -93,7 +93,7 @@ Hiring Team
         candidate_name: str,
         interview_link: str
     ):
-        interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
+        
 
         subject = "AI Interview Invitation – Futuready"
 
@@ -252,6 +252,7 @@ Hiring Team
 
 
 email_service = EmailService()
+
 
 
 
