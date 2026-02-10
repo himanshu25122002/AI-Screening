@@ -27,6 +27,7 @@ if (!token) {
 
 
 let interviewCompleted = false;
+let interviewPaused = false;
 let fullscreenExitCount = 0;
 let tabSwitchCount = 0;
 let cameraFailureCount = 0;
@@ -89,14 +90,20 @@ function requestFullscreen() {
 }
 
 function pauseInterviewForFullscreen() {
-  if (interviewCompleted || interviewPausedForFullscreen) return;
+  if (interviewCompleted || interviewPaused) return;
 
+  interviewPaused = true;
   interviewPausedForFullscreen = true;
+
   clearInterval(timerInterval);
+  speechSynthesis.cancel();    
 
   const overlay = document.getElementById("fullscreenOverlay");
   if (overlay) overlay.style.display = "flex";
+
+  console.warn("⏸ Interview paused (fullscreen violation)");
 }
+
 
 
 document.addEventListener("fullscreenchange", () => {
@@ -147,10 +154,11 @@ function startTimer() {
   timerEl.innerText = `⏱ ${timeLeft}s`;
 
   timerInterval = setInterval(() => {
-    if (interviewCompleted) {
+    if (interviewCompleted || interviewPaused) {
       clearInterval(timerInterval);
       return;
     }
+
 
     timeLeft--;
     timerEl.innerText = `⏱ ${timeLeft}s`;
@@ -168,14 +176,21 @@ function startTimer() {
 
 /* ================= TTS ================= */
 function speak(text, onDone) {
+  if (interviewPaused || interviewCompleted) return;  // 🔒 BLOCK
+
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 0.95;
   u.pitch = 1;
   u.volume = 1;
-  u.onend = () => onDone && onDone();
+
+  u.onend = () => {
+    if (!interviewPaused && onDone) onDone();
+  };
+
   speechSynthesis.speak(u);
 }
+
 
 /* ================= STT ================= */
 const SpeechRecognition =
@@ -235,7 +250,7 @@ async function initCamera() {
 
 /* ================= FETCH QUESTION ================= */
 async function fetchQuestion(answer = null) {
-  if (interviewCompleted) return;
+  if (interviewCompleted || interviewPaused) return;
 
   try {
     setState("thinking");
@@ -545,10 +560,16 @@ document.getElementById("resumeFullscreenBtn").onclick = async () => {
   const overlay = document.getElementById("fullscreenOverlay");
   if (overlay) overlay.style.display = "none";
 
+  interviewPaused = false;                 // ✅ RESUME
   interviewPausedForFullscreen = false;
 
-  if (!interviewCompleted) startTimer();
+  console.log("▶️ Interview resumed");
+
+  if (!interviewCompleted) {
+    startTimer();
+  }
 };
+
 
 
 /* ================= START INTERVIEW ================= */
