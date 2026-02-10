@@ -398,15 +398,15 @@ if page == "📝 Candidate Forms":
     display_df = df[[
         "first_name",
         "last_name",
-        "email",
-        "phone",
+        "email_form",
+        "phone_form",
         "Job Name",
         "years_of_experience",
         "current_ctc",
         "expected_ctc",
         "notice_period",
         "portfolio_link",
-        "created_at"
+        "created_at_form"
     ]].copy()
 
     display_df["Candidate Name"] = (
@@ -415,25 +415,26 @@ if page == "📝 Candidate Forms":
 
     display_df = display_df[[
         "Candidate Name",
-        "email",
-        "phone",
+        "email_form",
+        "phone_form",
         "Job Name",
         "years_of_experience",
         "current_ctc",
         "expected_ctc",
         "notice_period",
         "portfolio_link",
-        "created_at"
+        "created_at_form"
     ]].rename(columns={
-        "email": "Email",
-        "phone": "Phone",
+        "email_form": "Email",
+        "phone_form": "Phone",
         "years_of_experience": "Experience (Years)",
         "current_ctc": "Current CTC",
         "expected_ctc": "Expected CTC",
         "notice_period": "Notice Period (Days)",
         "portfolio_link": "Portfolio",
-        "created_at": "Submitted At"
+        "created_at_form": "Submitted At"
     })
+
 
 
     st.dataframe(
@@ -441,6 +442,7 @@ if page == "📝 Candidate Forms":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
