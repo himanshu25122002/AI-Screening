@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr, Field, validator
-
+from backend.config import config
 from backend.database import supabase
 from backend.services.email_service import email_service
 
