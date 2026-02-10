@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 import uuid
 
@@ -8,14 +9,20 @@ from backend.config import config
 
 router = APIRouter()
 
-@router.post("/interviews/schedule")
-def schedule_interview(
-    candidate_id: str,
+
+class InterviewSchedulePayload(BaseModel):
+    candidate_id: str
     scheduled_at: str
-):
+
+
+@router.post("/interviews/schedule")
+def schedule_interview(payload: InterviewSchedulePayload):
+
     # Parse datetime
     try:
-        scheduled_dt = datetime.fromisoformat(scheduled_at).astimezone(timezone.utc)
+        scheduled_dt = datetime.fromisoformat(
+            payload.scheduled_at
+        ).astimezone(timezone.utc)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid datetime format")
 
@@ -30,7 +37,7 @@ def schedule_interview(
         supabase
         .table("candidates")
         .select("email, name")
-        .eq("id", candidate_id)
+        .eq("id", payload.candidate_id)
         .single()
         .execute()
         .data
@@ -41,7 +48,7 @@ def schedule_interview(
 
     # Insert interview session
     supabase.table("ai_interview_sessions").insert({
-        "candidate_id": candidate_id,
+        "candidate_id": payload.candidate_id,
         "interview_token": token,
         "scheduled_at": scheduled_dt.isoformat(),
         "expires_at": expires_at.isoformat(),
@@ -62,6 +69,6 @@ def schedule_interview(
     supabase.table("candidates").update({
         "status": "interview_sent",
         "updated_at": datetime.utcnow().isoformat()
-    }).eq("id", candidate_id).execute()
+    }).eq("id", payload.candidate_id).execute()
 
     return {"success": True}
