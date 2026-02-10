@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import BackgroundTasks
 from uuid import uuid4
-
+import secrets
 from backend.models import (
     VacancyCreate, VacancyResponse, CandidateCreate, CandidateResponse,
     ResumeScreeningRequest, ResumeScreeningResponse, AIInterviewRequest,
@@ -329,6 +329,44 @@ def batch_screen_resumes(vacancy_id: str):
         "results": results
     }
 
+from datetime import timedelta
+import secrets
+
+@app.post("/interviews/schedule")
+def schedule_interview(candidate_id: str):
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=1)
+
+    # Activate existing session or create one
+    supabase.table("ai_interview_sessions").upsert({
+        "candidate_id": candidate_id,
+        "interview_token": token,
+        "expires_at": expires_at.isoformat(),
+        "is_active": True,
+        "updated_at": datetime.utcnow().isoformat()
+    }).execute()
+
+    interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
+
+    candidate = supabase.table("candidates")\
+        .select("email, name")\
+        .eq("id", candidate_id)\
+        .single()\
+        .execute()
+
+    email_service.send_interview_invitation(
+        candidate_id,
+        candidate.data["email"],
+        candidate.data["name"],
+        interview_link
+    )
+
+    supabase.table("candidates").update({
+        "status": "interview_sent"
+    }).eq("id", candidate_id).execute()
+
+    return {"success": True}
+
 
 @app.post("/interviews/start")
 def start_interview(request: AIInterviewRequest):
@@ -515,6 +553,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
