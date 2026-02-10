@@ -62,27 +62,33 @@ class EmailService:
         candidate_id: str,
         email: str,
         name: str,
-        scheduled_at: str
+        interview_link: str
     ):
-        interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
-        schedule_link = f"{config.FRONTEND_URL}/schedule?candidate_id={candidate_id}"
+        subject = "Your AI Interview Link (Valid for 1 Hour)"
 
-        subject = "Schedule Your AI Interview"
-        body = f"""
-Hi {name},
+        html_content = f"""
+        <html>
+          <body>
+            <h3>Hello {name},</h3>
+            <p>Your AI interview is ready.</p>
+            <p>
+              <a href="{interview_link}">
+                Start AI Interview
+              </a>
+            </p>
+            <p><b>Note:</b> This link is valid for <b>1 hour only</b>.</p>
+          </body>
+        </html>
+        """
 
-Thank you for submitting your application.
+        self._send_email(
+            candidate_id,
+            email,
+            subject,
+            html_content,
+            "interview_schedule"
+        )
 
-Please schedule your AI interview using the link below:
-{schedule_link}
-
-Once scheduled, your interview link will be active for 1 hour only.
-
-Best regards,
-Hiring Team
-"""
-
-        send_email(email, subject, body)
 
     # ======================================================
     # 2️⃣ AI INTERVIEW INVITE (AUTO LINK)
@@ -252,6 +258,7 @@ Hiring Team
 
 
 email_service = EmailService()
+
 
 
 
