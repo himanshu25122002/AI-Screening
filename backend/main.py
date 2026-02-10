@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from fastapi import BackgroundTasks
 from uuid import uuid4
-import secrets
+
 from backend.models import (
     VacancyCreate, VacancyResponse, CandidateCreate, CandidateResponse,
     ResumeScreeningRequest, ResumeScreeningResponse, AIInterviewRequest,
@@ -18,11 +18,13 @@ from backend.services.resume_parser import ResumeParser
 from backend.config import config
 from backend.ai_interview import router as interview_router
 from backend.services.candidate_form import router as candidate_form_router
+from backend.services.interview_schedule import router as interview_schedule_router
 
 
 
 
 app = FastAPI(title="AI Candidate Screening API", version="1.0.0")
+app.include_router(interview_schedule_router)
 app.include_router(interview_router)
 app.add_middleware(
     CORSMiddleware,
@@ -207,32 +209,33 @@ def get_candidate(candidate_id: str):
         if not candidate_res.data:
             raise HTTPException(status_code=404, detail="Candidate not found")
 
-        form_data = (
+        form_res = (
             supabase
             .table("candidate_forms")
             .select("*")
             .eq("candidate_id", candidate_id)
-            .Single()
+            .maybeSingle()
             .execute()
         )
-        form_data = form_res.data[0] if form_res.data else None
-        interview_data = (
+
+        interview_res = (
             supabase
             .table("ai_interviews")
             .select("*")
             .eq("candidate_id", candidate_id)
-            .Single()
+            .maybeSingle()
             .execute()
         )
-        interview_data = interview_res.data[0] if interview_res.data else None
+
         return {
             "success": True,
             "data": {
                 "candidate": candidate_res.data,
-                "form_data": form_data.data,
-                "interview_data": interview_data.data
+                "form_data": form_res.data,
+                "interview_data": interview_res.data
             }
         }
+
 
     except HTTPException:
         raise
@@ -329,43 +332,7 @@ def batch_screen_resumes(vacancy_id: str):
         "results": results
     }
 
-from datetime import timedelta
-import secrets
 
-@app.post("/interviews/schedule")
-def schedule_interview(candidate_id: str):
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=1)
-
-    # Activate existing session or create one
-    supabase.table("ai_interview_sessions").upsert({
-        "candidate_id": candidate_id,
-        "interview_token": token,
-        "expires_at": expires_at.isoformat(),
-        "is_active": True,
-        "updated_at": datetime.utcnow().isoformat()
-    }).execute()
-
-    interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
-
-    candidate = supabase.table("candidates")\
-        .select("email, name")\
-        .eq("id", candidate_id)\
-        .single()\
-        .execute()
-
-    email_service.send_interview_invitation(
-        candidate_id,
-        candidate.data["email"],
-        candidate.data["name"],
-        interview_link
-    )
-
-    supabase.table("candidates").update({
-        "status": "interview_sent"
-    }).eq("id", candidate_id).execute()
-
-    return {"success": True}
 
 
 @app.post("/interviews/start")
@@ -390,7 +357,7 @@ def get_interview(candidate_id: str):
         result = supabase.table("ai_interviews")\
             .select("*")\
             .eq("candidate_id", candidate_id)\
-            .Single()\
+            .single()\
             .execute()
 
         if not result.data:
@@ -553,6 +520,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
