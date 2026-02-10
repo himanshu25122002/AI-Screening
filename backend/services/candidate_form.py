@@ -109,32 +109,17 @@ def submit_candidate_form(payload: CandidateFormPayload):
             detail="Candidate form already submitted"
         )
 
-    # --------------------------------
-    # 3️⃣ Update candidate status
-    # --------------------------------
+    email_service.send_schedule_interview_link(
+        payload.candidate_id,
+        candidate["email"],
+        candidate["name"]
+    )
+
     supabase.table("candidates").update({
         "status": "form_completed",
         "updated_at": datetime.utcnow().isoformat()
     }).eq("id", payload.candidate_id).execute()
 
-    # --------------------------------
-    # 4️⃣ Send AI interview email (NON-BLOCKING)
-    # --------------------------------
-    try:
-        email_service.send_interview_invitation(
-            payload.candidate_id,
-            candidate["email"],
-            candidate["name"]
-        )
-
-        supabase.table("candidates").update({
-            "status": "interview_sent",
-            "updated_at": datetime.utcnow().isoformat()
-        }).eq("id", payload.candidate_id).execute()
-
-    except Exception as e:
-        # Never fail form submission
-        print("⚠️ Interview email failed:", e)
 
     # --------------------------------
     # 5️⃣ Always return success
