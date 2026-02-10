@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from datetime import datetime
 import json
-
+from zoneinfo import ZoneInfo
 from openai import OpenAI
 
 from backend.database import supabase
@@ -17,9 +17,14 @@ client = OpenAI(api_key=config.OPENAI_API_KEY)
 MAX_QUESTIONS = 5
 
 
+IST = ZoneInfo("Asia/Kolkata")
+
+
 class InterviewPayload(BaseModel):
     candidate_id: str
     answer: str | None = None
+
+
 class TokenPayload(BaseModel):
     token: str
 
@@ -28,6 +33,7 @@ class TokenPayload(BaseModel):
 def validate_interview(payload: TokenPayload):
     token = payload.token
 
+    # 1️⃣ Fetch active interview session
     res = (
         supabase
         .table("ai_interview_sessions")
@@ -41,7 +47,9 @@ def validate_interview(payload: TokenPayload):
         raise HTTPException(status_code=403, detail="Invalid interview link")
 
     session = res.data[0]
-    now = datetime.now(timezone.utc)
+
+    # 2️⃣ Current time in IST
+    now = datetime.now(IST)
 
     scheduled_at = session.get("scheduled_at")
     expires_at = session.get("expires_at")
@@ -49,14 +57,11 @@ def validate_interview(payload: TokenPayload):
     if not scheduled_at or not expires_at:
         raise HTTPException(status_code=403, detail="Interview not scheduled properly")
 
-    def to_utc(dt):
-        if isinstance(dt, str):
-            return datetime.fromisoformat(dt.replace("Z", "+00:00")).astimezone(timezone.utc)
-        return dt.astimezone(timezone.utc)
+    # 3️⃣ Parse DB timestamps as IST
+    scheduled_at_dt = datetime.fromisoformat(scheduled_at).astimezone(IST)
+    expires_at_dt = datetime.fromisoformat(expires_at).astimezone(IST)
 
-    scheduled_at_dt = to_utc(scheduled_at)
-    expires_at_dt = to_utc(expires_at)
-
+    # 4️⃣ Time validation (IST vs IST)
     if now < scheduled_at_dt:
         raise HTTPException(status_code=403, detail="Interview has not started yet")
 
@@ -67,10 +72,12 @@ def validate_interview(payload: TokenPayload):
 
         raise HTTPException(status_code=403, detail="Interview link expired")
 
-    # ✅ CRITICAL FIX
-    supabase.table("ai_interview_sessions").update({
-        "started_at": session.get("started_at") or now.isoformat()
-    }).eq("id", session["id"]).execute()
+    # 5️⃣ Mark interview started (only once)
+    if not session.get("started_at"):
+        supabase.table("ai_interview_sessions").update({
+            "started_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }).eq("id", session["id"]).execute()
 
     return {
         "success": True,
