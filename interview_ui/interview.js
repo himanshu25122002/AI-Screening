@@ -17,6 +17,7 @@ const API_BASE = "https://ai-screening-wbb0.onrender.com";
 
 const params = new URLSearchParams(window.location.search);
 const token = params.get("token");
+let candidateId = null;
 
 
 if (!token) {
@@ -39,21 +40,29 @@ let interviewStarted = false;
 
 
 async function validateInterviewToken() {
+  const token = new URLSearchParams(window.location.search).get("token");
+
+  if (!token) {
+    alert("Invalid interview link");
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/ai-interview/validate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token })
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ token })   // 🔥 THIS LINE FIXES 422
   });
 
   if (!res.ok) {
-    const err = await res.json();
-    document.body.innerHTML = `<h2>${err.detail || "Interview link expired"}</h2>`;
     throw new Error("Interview validation failed");
   }
 
   const data = await res.json();
   candidateId = data.candidate_id;
 }
+
 
 
 /* ================= AI STATE ================= */
