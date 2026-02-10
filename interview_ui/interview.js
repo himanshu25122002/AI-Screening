@@ -39,6 +39,13 @@ const MAX_TAB_SWITCH = 3;
 const MAX_CAMERA_FAIL = 3;
 let interviewStarted = false;
 
+function hardStopTTS(reason = "") {
+  try {
+    speechSynthesis.cancel();
+    console.warn("🛑 TTS force-stopped", reason);
+  } catch {}
+}
+
 
 async function validateInterviewToken() {
   const token = new URLSearchParams(window.location.search).get("token");
@@ -130,7 +137,9 @@ document.addEventListener("visibilitychange", () => {
 
   if (document.hidden) {
     tabSwitchCount++;
-
+    hardStopTTS("tab-switch");
+    interviewPaused = true;
+    clearInterval(timerInterval);
     alert(
       `⚠️ Tab switching detected.\nWarning ${tabSwitchCount}/${MAX_TAB_SWITCH}`
     );
@@ -407,14 +416,24 @@ function issueWarning(reason) {
   warnings++;
   lastWarningTime = now();
 
+  interviewPaused = true;
+
+  
+  speechSynthesis.cancel();  
+
+  hardStopTTS("warning");
+  clearInterval(timerInterval);
+
   setTimeout(() => {
     alert(`⚠️ Warning ${warnings}/${MAX_WARNINGS}\n${reason}`);
-  }, 100); // avoid focus-loop
+  }, 0);
 
   if (warnings >= MAX_WARNINGS) {
     terminateInterview("Interview terminated due to repeated violations.");
   }
 }
+
+
 
 function terminateInterview(reason) {
   setTimeout(() => {
