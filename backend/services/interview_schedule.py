@@ -15,48 +15,53 @@ IST = ZoneInfo("Asia/Kolkata")
 
 class InterviewSchedulePayload(BaseModel):
     candidate_id: str
-    scheduled_at: str   # ISO string WITH timezone (+05:30)
+    scheduled_at: str
 
-
-from zoneinfo import ZoneInfo
-
-from zoneinfo import ZoneInfo
-from datetime import datetime, timedelta, timezone
-
-IST = ZoneInfo("Asia/Kolkata")
 
 @router.post("/interviews/schedule")
 def schedule_interview(payload: InterviewSchedulePayload):
 
+    # 1️⃣ Parse IST time → convert to UTC
     try:
-        # 🔥 Treat incoming time as IST
         scheduled_ist = datetime.fromisoformat(payload.scheduled_at).replace(tzinfo=IST)
-
-        # 🔁 Convert to UTC for storage
-        scheduled_dt = scheduled_ist.astimezone(timezone.utc)
-
+        scheduled_utc = scheduled_ist.astimezone(timezone.utc)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid datetime format")
 
-    if scheduled_dt < datetime.now(timezone.utc):
+    if scheduled_utc < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Cannot schedule in the past")
 
-    expires_at = scheduled_dt + timedelta(hours=1)
+    expires_at = scheduled_utc + timedelta(hours=1)
     token = str(uuid.uuid4())
 
+    # 2️⃣ FETCH CANDIDATE (🔥 THIS WAS MISSING)
+    candidate = (
+        supabase
+        .table("candidates")
+        .select("email, name")
+        .eq("id", payload.candidate_id)
+        .single()
+        .execute()
+        .data
+    )
+
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    # 3️⃣ UPSERT INTERVIEW SESSION
     supabase.table("ai_interview_sessions").upsert(
         {
             "candidate_id": payload.candidate_id,
             "interview_token": token,
-            "scheduled_at": scheduled_dt.isoformat(),  
-            "expires_at": expires_at.isoformat(),     
+            "scheduled_at": scheduled_utc.isoformat(),  # UTC stored
+            "expires_at": expires_at.isoformat(),       # UTC stored
             "is_active": True,
             "updated_at": datetime.utcnow().isoformat()
         },
         on_conflict="candidate_id"
     ).execute()
 
-
+    # 4️⃣ SEND EMAIL
     interview_link = f"{config.INTERVIEW_UI_URL}?token={token}"
 
     email_service.send_interview_invitation(
@@ -64,5 +69,11 @@ def schedule_interview(payload: InterviewSchedulePayload):
         candidate["name"],
         interview_link
     )
+
+    # 5️⃣ UPDATE CANDIDATE STATUS
+    supabase.table("candidates").update({
+        "status": "interview_sent",
+        "updated_at": datetime.utcnow().isoformat()
+    }).eq("id", payload.candidate_id).execute()
 
     return {"success": True}
