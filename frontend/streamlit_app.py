@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+from datetime import datetime
 
 # =========================
 # CONFIG
@@ -8,7 +9,7 @@ import pandas as pd
 BACKEND_URL = st.secrets.get("BACKEND_URL", "http://localhost:8000")
 
 # =========================
-# Candidate interview routing (UNCHANGED)
+# Candidate Flow (FORM → SCHEDULE)
 # =========================
 params = st.query_params
 candidate_id = params.get("candidate_id")
@@ -20,42 +21,59 @@ if candidate_id:
             params={"candidate_id": candidate_id},
             timeout=60
         )
-        form_completed = r.json().get("form_completed", False)
+        status_completed = r.json().get("form_completed", False)
     except Exception:
-        form_completed = False
+        status_completed = False
 
-    if not form_completed:
+    # 1️⃣ Candidate fills form
+    if not status_completed:
         import candidate_form
         candidate_form.render(candidate_id)
-    else:
-        st.success("✅ Form already submitted")
+        st.stop()
 
-        interview_url = (
-            "https://ai-screening-six.vercel.app/index.html"
-            f"?candidate_id={candidate_id}"
+    # 2️⃣ Candidate schedules interview
+    st.success("✅ Application submitted successfully")
+
+    st.markdown("## 📅 Schedule Your AI Interview")
+
+    scheduled_at = st.date_input("Select Interview Date")
+    scheduled_time = st.time_input("Select Interview Time")
+    if "interview_scheduled" not in st.session_state:
+        st.session_state.interview_scheduled = False
+
+    if st.button("📩 Confirm & Send Interview Link", disabled=st.session_state.interview_scheduled):
+        scheduled_datetime = datetime.combine(
+            scheduled_at,
+            scheduled_time
         )
 
-        st.markdown("### 🎤 AI Interview")
-        st.markdown(
-            f"""
-            <a href="{interview_url}" target="_blank">
-                <button style="
-                    padding:14px 28px;
-                    font-size:16px;
-                    background:#4CAF50;
-                    color:white;
-                    border:none;
-                    border-radius:8px;
-                    cursor:pointer;
-                ">
-                Start AI Interview
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
+        if scheduled_datetime <= datetime.utcnow():
+            st.error("❌ Please select a future date and time")
+            st.stop()
+
+
+        res = requests.post(
+            f"{BACKEND_URL}/interviews/schedule",
+            json={
+                "candidate_id": candidate_id,
+                "scheduled_at": scheduled_datetime.isoformat()
+            },
+            timeout=60
         )
+
+        if res.status_code == 200:
+            st.session_state.interview_scheduled = True
+            st.success(
+                "✅ Interview scheduled!\n\n"
+                "📧 Check your email for the interview link.\n\n"
+                "⏱ Link will be active for 1 hour from scheduled time."
+            )
+        else:
+            st.error("❌ Failed to schedule interview")
+            st.text(res.text)
 
     st.stop()
+
 
 # =========================
 # PAGE CONFIG
@@ -442,6 +460,7 @@ if page == "📝 Candidate Forms":
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
