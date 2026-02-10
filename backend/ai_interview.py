@@ -28,8 +28,6 @@ class TokenPayload(BaseModel):
 
 
 
-IST = ZoneInfo("Asia/Kolkata")
-
 @router.post("/ai-interview/validate")
 def validate_interview(payload: TokenPayload):
     token = payload.token
@@ -48,36 +46,36 @@ def validate_interview(payload: TokenPayload):
 
     session = res.data[0]
 
+    # ✅ Always compare in UTC
     now_utc = datetime.now(timezone.utc)
 
-    scheduled_at_dt = datetime.fromisoformat(
-        session["scheduled_at"].replace("Z", "+00:00")
-    ).astimezone(timezone.utc)
+    def to_utc(dt):
+        if isinstance(dt, str):
+            return datetime.fromisoformat(dt.replace("Z", "+00:00")).astimezone(timezone.utc)
+        return dt.astimezone(timezone.utc)
 
-    expires_at_dt = datetime.fromisoformat(
-        session["expires_at"].replace("Z", "+00:00")
-    ).astimezone(timezone.utc)
+    scheduled_at_utc = to_utc(session["scheduled_at"])
+    expires_at_utc = to_utc(session["expires_at"])
 
-    if now_utc < scheduled_at_dt:
+    if now_utc < scheduled_at_utc:
         raise HTTPException(status_code=403, detail="Interview has not started yet")
 
-    if now_utc > expires_at_dt:
+    if now_utc > expires_at_utc:
         supabase.table("ai_interview_sessions").update({
             "is_active": False
         }).eq("id", session["id"]).execute()
-
         raise HTTPException(status_code=403, detail="Interview link expired")
 
-    # mark started (once)
-    supabase.table("ai_interview_sessions").update({
-        "started_at": session.get("started_at") or now_utc.isoformat()
-    }).eq("id", session["id"]).execute()
+    # ✅ Save started_at ONCE
+    if not session.get("started_at"):
+        supabase.table("ai_interview_sessions").update({
+            "started_at": now_utc.isoformat()
+        }).eq("id", session["id"]).execute()
 
     return {
         "success": True,
         "candidate_id": session["candidate_id"]
     }
-
 
 
 
