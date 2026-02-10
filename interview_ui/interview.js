@@ -32,6 +32,7 @@ let fullscreenExitCount = 0;
 let tabSwitchCount = 0;
 let cameraFailureCount = 0;
 let interviewPausedForFullscreen = false;
+let lastQuestionText = null;
 
 
 const MAX_FULLSCREEN_EXIT = 3;
@@ -312,12 +313,12 @@ function showQuestion(q, isFirst = false) {
   if (isFirst) {
     speak(q, () => {
       setTimeout(() => {
-        if (!interviewCompleted) startTimer();
+        if (!interviewCompleted && !interviewPaused) startTimer();
       }, 500);
     });
   } else {
     speak(q, () => {
-      if (!interviewCompleted) startTimer();
+      if (!interviewCompleted && !interviewPaused) startTimer();
     });
   }
   
@@ -422,7 +423,7 @@ function issueWarning(reason) {
   hardStopTTS("warning");
   clearInterval(timerInterval);
 
-  // 🔥 FORCE FULLSCREEN OVERLAY EVEN IF ALREADY PAUSED
+  pauseInterviewForFullscreen();
   const overlay = document.getElementById("fullscreenOverlay");
   if (overlay) overlay.style.display = "flex";
 
@@ -588,9 +589,19 @@ document.getElementById("resumeFullscreenBtn").onclick = async () => {
 
   console.log("▶️ Interview resumed");
 
-  if (!interviewCompleted) {
-    startTimer();
+  if (interviewCompleted) return;
+
+  if (!questionEl.innerText || questionEl.innerText.includes("Loading")) {
+    if (lastQuestionText) {
+      questionEl.innerText = lastQuestionText;
+    } else {
+      fetchQuestion(); 
+      return;
+    }
   }
+
+  startTimer();
+
 };
 
 
