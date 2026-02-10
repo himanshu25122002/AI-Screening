@@ -3,6 +3,11 @@
  * FULLSCREEN + CAMERA + TAB LOCK + STT + TTS
  * ZERO BACKEND CHANGES
  *************************************************/
+if (window.location.protocol !== "https:") {
+  alert("Secure connection required");
+}
+
+
 console.log("✅ interview.js loaded");
 window.addEventListener("unhandledrejection", (e) => {
   console.error("❌ Unhandled promise rejection:", e.reason);
@@ -11,7 +16,15 @@ window.addEventListener("unhandledrejection", (e) => {
 const API_BASE = "https://ai-screening-wbb0.onrender.com";
 
 const params = new URLSearchParams(window.location.search);
-const candidateId = params.get("candidate_id");
+const token = params.get("token");
+
+let candidateId = null;
+
+if (!token) {
+  alert("Invalid interview link");
+  throw new Error("token missing");
+}
+
 
 let interviewCompleted = false;
 let fullscreenExitCount = 0;
@@ -28,6 +41,23 @@ let interviewStarted = false;
 if (!candidateId) {
   alert("Missing candidate_id");
   throw new Error("candidate_id missing");
+}
+
+async function validateInterviewToken() {
+  const res = await fetch(`${API_BASE}/ai-interview/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    document.body.innerHTML = `<h2>${err.detail || "Interview link expired"}</h2>`;
+    throw new Error("Interview validation failed");
+  }
+
+  const data = await res.json();
+  candidateId = data.candidate_id;
 }
 
 
@@ -529,24 +559,30 @@ window.addEventListener("DOMContentLoaded", () => {
   console.log("✅ Start Interview button ready");
 
   startBtn.addEventListener("click", async () => {
-    console.log("🚀 Interview started");
+    try {
+      console.log("🔐 Validating interview token...");
+      await validateInterviewToken();
 
-    requestFullscreen();
+      console.log("🚀 Interview started");
+      requestFullscreen();
 
-    interviewStarted = true;
-    document.getElementById("startScreen")?.remove();
+      interviewStarted = true;
+      document.getElementById("startScreen")?.remove();
 
-    await initCamera();
+      await initCamera();
 
-    await new Promise(resolve => {
-      if (videoEl.readyState >= 2) return resolve();
-      videoEl.onloadeddata = () => resolve();
-    });
+      await new Promise(resolve => {
+        if (videoEl.readyState >= 2) return resolve();
+        videoEl.onloadeddata = () => resolve();
+      });
 
-    console.log("📸 Starting ML pipeline");
-    mlCamera.start();
+      console.log("📸 Starting ML pipeline");
+      mlCamera.start();
 
-    fetchQuestion();
+      fetchQuestion();
+    } catch (e) {
+      console.error(e);
+    }
   });
 });
 
