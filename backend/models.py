@@ -54,6 +54,28 @@ class ResumeScreeningResponse(BaseModel):
     extracted_skills: List[str]
     experience_years: float
 
+class CandidateForm(Base):
+    __tablename__ = "candidate_forms"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    candidate_id = Column(UUID(as_uuid=True), ForeignKey("candidates.id"), unique=True)
+    # Personal
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    gender = Column(String, nullable=False)
+    age = Column(Integer, nullable=False)
+    email = Column(String, nullable=False)
+    phone = Column(String, nullable=False)
+    address = Column(String, nullable=False)
+    city = Column(String, nullable=False)
+    state = Column(String, nullable=False)
+    # Professional
+    years_of_experience = Column(Integer, nullable=False)
+    current_ctc = Column(Integer, nullable=False)
+    expected_ctc = Column(Integer, nullable=False)
+    notice_period = Column(Integer, nullable=False)
+    portfolio_link = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 class AIInterviewRequest(BaseModel):
     candidate_id: str
     vacancy_id: str
@@ -84,3 +106,4 @@ class EmailRequest(BaseModel):
 
 class GoogleFormSyncRequest(BaseModel):
     sheet_id: Optional[str] = None
+
