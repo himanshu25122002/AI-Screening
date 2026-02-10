@@ -377,31 +377,52 @@ if page == "📝 Candidate Forms":
     # DISPLAY TABLE
     # =========================
     display_df = df[[
-        "name",
+        "first_name",
+        "last_name",
         "email",
+        "phone",
         "Job Name",
-        "availability",
-        "salary_expectations",
-        "portfolio_links",
-        "skill_self_assessment",
-        "additional_info",
-        "form_submitted_at"
+        "years_of_experience",
+        "current_ctc",
+        "expected_ctc",
+        "notice_period",
+        "portfolio_link",
+        "created_at"
+    ]].copy()
+
+    display_df["Candidate Name"] = (
+        display_df["first_name"].fillna("") + " " + display_df["last_name"].fillna("")
+    )
+
+    display_df = display_df[[
+        "Candidate Name",
+        "email",
+        "phone",
+        "Job Name",
+        "years_of_experience",
+        "current_ctc",
+        "expected_ctc",
+        "notice_period",
+        "portfolio_link",
+        "created_at"
     ]].rename(columns={
-        "name": "Candidate Name",
         "email": "Email",
-        "availability": "Availability",
-        "salary_expectations": "Salary",
-        "portfolio_links": "Portfolio Links",
-        "skill_self_assessment": "Skill Self Assessment",
-        "additional_info": "Additional Info",
-        "form_submitted_at": "Submitted At"
+        "phone": "Phone",
+        "years_of_experience": "Experience (Years)",
+        "current_ctc": "Current CTC",
+        "expected_ctc": "Expected CTC",
+        "notice_period": "Notice Period (Days)",
+        "portfolio_link": "Portfolio",
+        "created_at": "Submitted At"
     })
+
 
     st.dataframe(
         display_df,
         use_container_width=True,
         hide_index=True
     )
+
 
 
 
