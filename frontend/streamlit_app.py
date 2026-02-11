@@ -105,9 +105,9 @@ st.sidebar.title("🧭 Navigation")
 
 page = st.sidebar.radio(
     "Select Page",
-    ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms"],
-    index=["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms"].index(st.session_state.page)
-    if st.session_state.page in ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms"]
+    ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews"],
+    index=["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews"].index(st.session_state.page)
+    if st.session_state.page in ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews"]
     else 0
 )
 
@@ -462,6 +462,112 @@ if page == "📝 Candidate Forms":
         use_container_width=True,
         hide_index=True
     )
+
+# =========================
+# PAGE 4 — AI INTERVIEW RESULTS
+# =========================
+if page == "🎤 AI Interviews":
+
+    # ---------- Header + Refresh ----------
+    col1, col2 = st.columns([8, 1])
+    with col1:
+        st.title("🎤 AI Interview Dashboard")
+
+    with col2:
+        if st.button("🔄 Refresh"):
+            st.session_state.force_refresh = True
+
+    # ---------- Initialize state ----------
+    if "selected_interview_job" not in st.session_state:
+        st.session_state.selected_interview_job = "All Jobs"
+
+    if "selected_candidate_id" not in st.session_state:
+        st.session_state.selected_candidate_id = None
+
+    # ---------- Fetch interview results ----------
+    with st.spinner("Fetching AI interview results..."):
+        interview_res = api_get("/ai-interview/results")
+        vacancy_res = api_get("/vacancies")
+
+    if interview_res.status_code != 200:
+        st.error("Failed to load AI interview results")
+        st.stop()
+
+    interviews = interview_res.json().get("data", [])
+    vacancies = vacancy_res.json().get("data", [])
+
+    if not interviews:
+        st.info("No AI interviews completed yet.")
+        st.stop()
+
+    df = pd.DataFrame(interviews)
+
+    # ---------- Map Job Names ----------
+    vacancy_map = {v["id"]: v["job_role"] for v in vacancies}
+    df["Job Name"] = df["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
+
+    # =========================
+    # 🔽 JOB FILTER
+    # =========================
+    st.markdown("### 🔍 Filter by Job")
+
+    job_options = ["All Jobs"] + sorted(df["Job Name"].unique().tolist())
+
+    st.session_state.selected_interview_job = st.selectbox(
+        "Select Job",
+        job_options,
+        index=job_options.index(st.session_state.selected_interview_job)
+        if st.session_state.selected_interview_job in job_options else 0
+    )
+
+    if st.session_state.selected_interview_job != "All Jobs":
+        df = df[df["Job Name"] == st.session_state.selected_interview_job]
+
+    # =========================
+    # 🔎 Candidate Search
+    # =========================
+    search_query = st.text_input("🔎 Search Candidate by Name")
+
+    if search_query:
+        df = df[df["candidate_name"].str.contains(search_query, case=False, na=False)]
+
+    if df.empty:
+        st.info("No candidates match this filter.")
+        st.stop()
+
+    # =========================
+    # 📋 Candidate List
+    # =========================
+    st.markdown("### 👥 Candidates")
+
+    for _, row in df.iterrows():
+        if st.button(row["candidate_name"], key=row["candidate_id"]):
+            st.session_state.selected_candidate_id = row["candidate_id"]
+
+    # =========================
+    # 📜 Display Q&A
+    # =========================
+    if st.session_state.selected_candidate_id:
+
+        selected = df[
+            df["candidate_id"] == st.session_state.selected_candidate_id
+        ]
+
+        if not selected.empty:
+            interview_data = selected.iloc[0]
+
+            st.markdown("---")
+            st.subheader(f"📄 Interview Details — {interview_data['candidate_name']}")
+
+            qa_list = interview_data.get("questions_answers", [])
+
+            if qa_list:
+                for idx, qa in enumerate(qa_list, start=1):
+                    st.markdown(f"**Q{idx}: {qa['question']}**")
+                    st.markdown(f"📝 {qa['answer']}")
+                    st.markdown("---")
+            else:
+                st.info("No Q&A found for this candidate.")
 
 
 
