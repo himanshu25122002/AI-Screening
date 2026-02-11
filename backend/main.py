@@ -29,7 +29,8 @@ app.add_middleware(
     allow_origins=[
         "https://ai-screening-six.vercel.app",  
         "http://localhost:3000",                
-        "http://localhost:8501"             
+        "http://localhost:8501",
+        "https://www.futureadymedia.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -527,6 +528,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
