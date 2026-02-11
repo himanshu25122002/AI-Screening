@@ -64,6 +64,7 @@ def create_vacancy(vacancy: VacancyCreate):
             "culture_traits": vacancy.culture_traits,
             "description": vacancy.description,
             "created_by": vacancy.created_by,
+            "external_job_id": vacancy.external_job_id,
             "status": "active"
         }).execute()
 
@@ -95,7 +96,7 @@ def get_vacancy(vacancy_id: str):
 @app.post("/candidates")
 async def create_candidate(
     background_tasks: BackgroundTasks,
-    vacancy_id: str = Form(...),
+    external_job_id: str = Form(...),
     name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
     phone: Optional[str] = Form(None),
@@ -103,6 +104,21 @@ async def create_candidate(
 ):
     try:
         resume_content = await resume.read()
+               
+        vacancy_res = (
+            supabase
+            .table("vacancies")
+            .select("id")
+            .eq("external_job_id", external_job_id)
+            .single()
+            .execute()
+        )
+
+        if not vacancy_res.data:
+            raise HTTPException(status_code=404, detail="Vacancy not found")
+
+        vacancy_id = vacancy_res.data["id"]
+
 
         # ---------- Parse resume ----------
         if resume.filename.endswith(".pdf"):
@@ -528,6 +544,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
