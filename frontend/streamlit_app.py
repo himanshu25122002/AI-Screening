@@ -464,29 +464,21 @@ if page == "📝 Candidate Forms":
     )
 
 # =========================
-# PAGE 4 — AI INTERVIEW RESULTS
+# PAGE 4 — AI INTERVIEW RESULTS (PRODUCTION)
 # =========================
 if page == "🎤 AI Interviews":
 
-    # ---------- Header + Refresh ----------
-    col1, col2 = st.columns([8, 1])
-    with col1:
-        st.title("🎤 AI Interview Dashboard")
+    st.title("🎤 AI Interview Dashboard")
 
+    # ---------- Refresh ----------
+    col1, col2 = st.columns([8, 1])
     with col2:
         if st.button("🔄 Refresh"):
             st.session_state.selected_candidate_id = None
             st.rerun()
 
-    # ---------- Initialize State ----------
-    if "selected_interview_job" not in st.session_state:
-        st.session_state.selected_interview_job = "All Jobs"
-
-    if "selected_candidate_id" not in st.session_state:
-        st.session_state.selected_candidate_id = None
-
     # ---------- Fetch Data ----------
-    with st.spinner("Fetching interview data..."):
+    with st.spinner("Loading interview data..."):
         candidates_res = api_get("/candidates")
         vacancies_res = api_get("/vacancies")
 
@@ -503,7 +495,7 @@ if page == "🎤 AI Interviews":
 
     df_candidates = pd.DataFrame(candidates)
 
-    # ---------- Keep Only Interviewed Candidates ----------
+    # Only interviewed candidates
     df_candidates = df_candidates[
         df_candidates["status"].isin(["interviewed", "recommended", "rejected"])
     ]
@@ -512,36 +504,30 @@ if page == "🎤 AI Interviews":
         st.info("No AI interviews completed yet.")
         st.stop()
 
-    # ---------- Map Job Names ----------
+    # Map job names
     vacancy_map = {v["id"]: v["job_role"] for v in vacancies}
-    df_candidates["Job Name"] = df_candidates["vacancy_id"].map(vacancy_map).fillna("Unknown Job")
+    df_candidates["Job Profile"] = df_candidates["vacancy_id"].map(vacancy_map)
 
     # =========================
     # 🔽 JOB FILTER
     # =========================
     st.markdown("### 🔍 Filter by Job")
 
-    job_options = ["All Jobs"] + sorted(df_candidates["Job Name"].unique().tolist())
-
-    st.session_state.selected_interview_job = st.selectbox(
-        "Select Job",
-        job_options,
-        index=job_options.index(st.session_state.selected_interview_job)
-        if st.session_state.selected_interview_job in job_options
-        else 0
+    job_options = ["All Jobs"] + sorted(
+        df_candidates["Job Profile"].dropna().unique().tolist()
     )
 
-    if st.session_state.selected_interview_job != "All Jobs":
+    selected_job = st.selectbox("Select Job", job_options)
+
+    if selected_job != "All Jobs":
         df_candidates = df_candidates[
-            df_candidates["Job Name"] == st.session_state.selected_interview_job
+            df_candidates["Job Profile"] == selected_job
         ]
 
     # =========================
-    # 🔎 Candidate Search
+    # 🔎 SEARCH
     # =========================
-    st.markdown("### 🔎 Search Candidate")
-
-    search_query = st.text_input("Type candidate name")
+    search_query = st.text_input("🔎 Search Candidate")
 
     if search_query:
         df_candidates = df_candidates[
@@ -549,70 +535,93 @@ if page == "🎤 AI Interviews":
         ]
 
     if df_candidates.empty:
-        st.info("No candidates match your filter.")
+        st.info("No candidates match filter.")
         st.stop()
 
     # =========================
-    # 👥 Candidate List
+    # FETCH INTERVIEW SCORES
     # =========================
-    st.markdown("### 👥 Candidates")
+    interview_rows = []
 
     for _, row in df_candidates.iterrows():
-        candidate_label = f"{row['name']}  —  {row['Job Name']}"
+        interview_res = api_get(f"/interviews/{row['id']}")
 
-        if st.button(candidate_label, key=row["id"]):
-            st.session_state.selected_candidate_id = row["id"]
+        if interview_res.status_code != 200:
+            continue
 
-    # =========================
-    # 📄 Interview Details
-    # =========================
-    if st.session_state.selected_candidate_id:
-
-        st.markdown("---")
-
-        with st.spinner("Loading interview details..."):
-            detail_res = api_get(f"/candidates/{st.session_state.selected_candidate_id}")
-
-        if detail_res.status_code != 200:
-            st.error("Failed to load interview details")
-            st.stop()
-
-        data = detail_res.json().get("data", {})
-        candidate_data = data.get("candidate", {})
-        interview_data = data.get("interview_data")
+        interview_data = interview_res.json().get("data")
 
         if not interview_data:
-            st.info("Interview record not found.")
-            st.stop()
+            continue
 
-        st.subheader(f"📄 Interview Details — {candidate_data.get('name')}")
+        interview_rows.append({
+            "Candidate ID": row["id"],
+            "Name": row["name"],
+            "Job Profile": row["Job Profile"],
+            "Skill": interview_data.get("skill_score"),
+            "Communication": interview_data.get("communication_score"),
+            "Problem Solving": interview_data.get("problem_solving_score"),
+            "Culture Fit": interview_data.get("culture_fit_score"),
+            "Overall": interview_data.get("overall_score"),
+            "Recommendation": interview_data.get("recommendation"),
+        })
 
-        # ---------- Scores Section ----------
-        col1, col2, col3, col4, col5 = st.columns(5)
+    if not interview_rows:
+        st.info("No interview records found.")
+        st.stop()
 
-        col1.metric("Skill", interview_data.get("skill_score", 0))
-        col2.metric("Communication", interview_data.get("communication_score", 0))
-        col3.metric("Problem Solving", interview_data.get("problem_solving_score", 0))
-        col4.metric("Culture Fit", interview_data.get("culture_fit_score", 0))
-        col5.metric("Overall", interview_data.get("overall_score", 0))
+    df_interviews = pd.DataFrame(interview_rows)
 
-        st.markdown(f"### 🏁 Recommendation: **{interview_data.get('recommendation')}**")
-        st.markdown(f"**Evaluation Notes:** {interview_data.get('evaluation_notes')}")
+    # =========================
+    # 📊 TABLE VIEW
+    # =========================
+    st.markdown("### 📊 Interview Results")
 
-        st.markdown("---")
+    selected_row = st.dataframe(
+        df_interviews.drop(columns=["Candidate ID"]),
+        use_container_width=True,
+        hide_index=True
+    )
 
-        # ---------- Transcript ----------
-        transcript = interview_data.get("interview_transcript", [])
+    # =========================
+    # SELECT CANDIDATE
+    # =========================
+    selected_name = st.selectbox(
+        "Select Candidate to View Details",
+        df_interviews["Name"].tolist()
+    )
 
-        if transcript:
-            st.markdown("### 📝 Interview Transcript")
+    selected_candidate = df_interviews[
+        df_interviews["Name"] == selected_name
+    ].iloc[0]
 
-            for idx, qa in enumerate(transcript, start=1):
-                st.markdown(f"**Q{idx}: {qa.get('question')}**")
-                st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
-                st.markdown("---")
-        else:
-            st.info("No transcript available.")
+    candidate_id = selected_candidate["Candidate ID"]
+
+    # =========================
+    # LOAD TRANSCRIPT
+    # =========================
+    detail_res = api_get(f"/interviews/{candidate_id}")
+
+    if detail_res.status_code != 200:
+        st.error("Failed to load interview details")
+        st.stop()
+
+    interview_detail = detail_res.json().get("data")
+
+    st.markdown("---")
+    st.subheader(f"📄 Interview Transcript — {selected_name}")
+
+    transcript = interview_detail.get("interview_transcript", [])
+
+    if not transcript:
+        st.info("No transcript available.")
+    else:
+        for idx, qa in enumerate(transcript, start=1):
+            st.markdown(f"**Q{idx}: {qa.get('question')}**")
+            st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
+            st.markdown("---")
+
+
 
 
 
