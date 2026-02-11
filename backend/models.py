@@ -9,6 +9,7 @@ class VacancyCreate(BaseModel):
     culture_traits: List[str]
     description: Optional[str] = None
     created_by: str
+    external_job_id: str
 
 class VacancyResponse(BaseModel):
     id: str
@@ -85,5 +86,6 @@ class EmailRequest(BaseModel):
 
 class GoogleFormSyncRequest(BaseModel):
     sheet_id: Optional[str] = None
+
 
 
