@@ -260,10 +260,13 @@ Key Responsibilities:
     # =========================
     # SELECT JOB
     # =========================
+    st.markdown("## 🎯 Select Job to Manage")
+
     selected_job_name = st.selectbox(
-        "Select Job to Manage",
+        "",
         df_jobs["job_role"].tolist()
     )
+
 
     selected_job = df_jobs[df_jobs["job_role"] == selected_job_name].iloc[0]
 
@@ -713,6 +716,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
