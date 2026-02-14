@@ -125,11 +125,14 @@ if page == "📥 HR Intake":
         "Candidates will apply from website and resumes will automatically enter system."
     )
 
+    # =========================
+    # JOB CREATION FORM
+    # =========================
     with st.form("hr_intake"):
 
         external_job_id = st.text_input(
             "External Job ID *",
-            help="Must match job ID used on website (e.g. WEB_DEV, AI_INTERN)"
+            help="Must match job ID used on website (e.g. web-developer, ai-intern)"
         )
 
         job_role = st.text_input("Job Position *")
@@ -174,10 +177,10 @@ if page == "📥 HR Intake":
             vacancy_res = api_post(
                 "/vacancies",
                 json={
-                    "external_job_id": external_job_id,
+                    "external_job_id": external_job_id.strip().lower(),
                     "job_role": job_role,
                     "required_skills": [s.strip() for s in skills.split(",")] if skills else [],
-                    "experience_level": str(experience_years) + " years",
+                    "experience_level": f"{experience_years} years",
                     "culture_traits": [c.strip() for c in culture.split(",")] if culture else [],
                     "description": f"""
 Job Summary:
@@ -196,16 +199,19 @@ Key Responsibilities:
                 st.stop()
 
             st.success("✅ Job created successfully!")
-                st.markdown("---")
+
+    # =========================
+    # JOB LIST SECTION
+    # =========================
+    st.markdown("---")
     st.markdown("## 📋 Created Jobs")
 
-    # ---------- Refresh Button ----------
     col1, col2 = st.columns([8, 1])
     with col2:
         if st.button("🔄 Refresh Jobs"):
-            st.session_state.refresh_jobs = True
+            st.rerun()
 
-    # ---------- Fetch Vacancies ----------
+    # Fetch jobs
     with st.spinner("Loading jobs..."):
         jobs_res = api_get("/vacancies")
 
@@ -221,7 +227,9 @@ Key Responsibilities:
 
     df_jobs = pd.DataFrame(jobs)
 
-    # ---------- Search ----------
+    # =========================
+    # SEARCH
+    # =========================
     search_query = st.text_input("🔎 Search Job (by name or external ID)")
 
     if search_query:
@@ -235,13 +243,12 @@ Key Responsibilities:
         st.info("No matching jobs found.")
         st.stop()
 
-    # ---------- Display Table ----------
-    display_jobs = df_jobs[[
-        "job_role",
-        "external_job_id",
-        "experience_level",
-        "created_at"
-    ]].rename(columns={
+    # =========================
+    # DISPLAY TABLE
+    # =========================
+    display_jobs = df_jobs[
+        ["job_role", "external_job_id", "experience_level", "created_at"]
+    ].rename(columns={
         "job_role": "Job Name",
         "external_job_id": "External Job ID",
         "experience_level": "Experience",
@@ -250,14 +257,15 @@ Key Responsibilities:
 
     st.dataframe(display_jobs, use_container_width=True, hide_index=True)
 
-    # ---------- Select Job ----------
+    # =========================
+    # SELECT JOB
+    # =========================
     selected_job_name = st.selectbox(
         "Select Job to Manage",
         df_jobs["job_role"].tolist()
     )
 
     selected_job = df_jobs[df_jobs["job_role"] == selected_job_name].iloc[0]
-    selected_vacancy_id = selected_job["id"]
 
     st.markdown("### 📄 Job Details")
 
@@ -265,6 +273,9 @@ Key Responsibilities:
     st.write(f"**Experience:** {selected_job['experience_level']}")
     st.write(f"**Status:** {selected_job['status']}")
 
+    # =========================
+    # MANUAL CANDIDATE UPLOAD
+    # =========================
     st.markdown("### ➕ Add Candidate Manually")
 
     manual_resume = st.file_uploader(
@@ -284,10 +295,7 @@ Key Responsibilities:
             res = api_post(
                 "/candidates",
                 data={
-                    "external_job_id": selected_job["external_job_id"],
-                    "name": "",
-                    "email": "",
-                    "phone": ""
+                    "external_job_id": selected_job["external_job_id"]
                 },
                 files={"resume": manual_resume}
             )
@@ -705,6 +713,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
