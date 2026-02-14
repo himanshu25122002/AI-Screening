@@ -117,61 +117,75 @@ st.session_state.page = page
 # PAGE 1 — HR INTAKE
 # =========================
 if page == "📥 HR Intake":
-    st.title("📥 HR Intake — Start Hiring Pipeline")
+
+    st.title("📥 HR Intake — Create Website Job")
+
     st.markdown(
-        "Fill job details **once** and upload **all resumes together**. "
-        "The system will process each resume automatically."
+        "Create job exactly as it exists on website.\n\n"
+        "Candidates will apply from website and resumes will automatically enter system."
     )
 
     with st.form("hr_intake"):
-        job_role = st.text_input("Job Role *")
 
-        skills = st.text_area(
-            "Required Skills * (comma-separated)",
-            placeholder="Python, FastAPI, SQL, AWS, etc..."
+        external_job_id = st.text_input(
+            "External Job ID *",
+            help="Must match job ID used on website (e.g. WEB_DEV, AI_INTERN)"
         )
 
-        experience = st.selectbox(
-            "Experience Level *",
-            ["Entry", "Mid", "Senior", "Lead"]
+        job_role = st.text_input("Job Position *")
+
+        experience_years = st.number_input(
+            "Experience Required (Years) *",
+            min_value=0,
+            max_value=30,
+            step=1
         )
 
-        culture = st.text_area(
-            "Culture Traits *",
-            placeholder="Collaborative, Growth-minded, Innovative, etc...."
+        job_summary = st.text_area(
+            "Job Summary *",
+            height=120
         )
 
-        job_description = st.text_area(
-            "Job Description / Responsibilities *",
-            placeholder=(
-                "Describe responsibilities, tech stack, expectations, KPIs,\n"
-                "team structure, tools, etc."
-            ),
+        key_responsibilities = st.text_area(
+            "Key Responsibilities *",
             height=160
         )
 
-        resumes = st.file_uploader(
-            "Upload Resumes (PDF)",
-            type=["pdf"],
-            accept_multiple_files=True
+        skills = st.text_area(
+            "Required Skills (comma-separated)",
+            placeholder="HTML, CSS, JavaScript, React..."
         )
 
-        submitted = st.form_submit_button("🚀 Start AI Hiring Pipeline")
+        culture = st.text_area(
+            "Culture Traits (comma-separated)",
+            placeholder="Collaborative, Innovative..."
+        )
+
+        submitted = st.form_submit_button("🚀 Create Job")
 
     if submitted:
-        if not all([job_role, skills, culture, job_description, resumes]):
-            st.error("❌ Please fill all required fields and upload resumes.")
+
+        if not all([external_job_id, job_role, job_summary, key_responsibilities]):
+            st.error("❌ Please fill all required fields.")
             st.stop()
 
-        with st.spinner("Creating job and uploading resumes..."):
+        with st.spinner("Creating job..."):
+
             vacancy_res = api_post(
                 "/vacancies",
                 json={
+                    "external_job_id": external_job_id,
                     "job_role": job_role,
-                    "required_skills": [s.strip() for s in skills.split(",")],
-                    "experience_level": experience,
-                    "culture_traits": [c.strip() for c in culture.split(",")],
-                    "description": job_description,
+                    "required_skills": [s.strip() for s in skills.split(",")] if skills else [],
+                    "experience_level": str(experience_years) + " years",
+                    "culture_traits": [c.strip() for c in culture.split(",")] if culture else [],
+                    "description": f"""
+Job Summary:
+{job_summary}
+
+Key Responsibilities:
+{key_responsibilities}
+""",
                     "created_by": "hr@company.com"
                 }
             )
@@ -181,38 +195,109 @@ if page == "📥 HR Intake":
                 st.text(vacancy_res.text)
                 st.stop()
 
-            vacancy_id = vacancy_res.json()["data"]["id"]
+            st.success("✅ Job created successfully!")
+                st.markdown("---")
+    st.markdown("## 📋 Created Jobs")
 
-            success_count = 0
-            failed_files = []
+    # ---------- Refresh Button ----------
+    col1, col2 = st.columns([8, 1])
+    with col2:
+        if st.button("🔄 Refresh Jobs"):
+            st.session_state.refresh_jobs = True
 
-            for resume in resumes:
-                try:
-                    res = api_post(
-                        "/candidates",
-                        data={
-                            "vacancy_id": vacancy_id,
-                            "name": "",
-                            "email": "",
-                            "phone": ""
-                        },
-                        files={"resume": resume}
-                    )
+    # ---------- Fetch Vacancies ----------
+    with st.spinner("Loading jobs..."):
+        jobs_res = api_get("/vacancies")
 
-                    if res.status_code == 200 and res.json().get("success"):
-                        success_count += 1
-                    else:
-                        failed_files.append(resume.name)
+    if jobs_res.status_code != 200:
+        st.error("Failed to load jobs")
+        st.stop()
 
-                except Exception:
-                    failed_files.append(resume.name)
+    jobs = jobs_res.json().get("data", [])
 
-            st.success(f"✅ {success_count} resumes uploaded successfully!")
+    if not jobs:
+        st.info("No jobs created yet.")
+        st.stop()
 
-            if failed_files:
-                st.warning("⚠️ Some resumes failed to process:")
-                for f in failed_files:
-                    st.write(f"- {f}")
+    df_jobs = pd.DataFrame(jobs)
+
+    # ---------- Search ----------
+    search_query = st.text_input("🔎 Search Job (by name or external ID)")
+
+    if search_query:
+        df_jobs = df_jobs[
+            df_jobs["job_role"].str.contains(search_query, case=False, na=False)
+            |
+            df_jobs["external_job_id"].str.contains(search_query, case=False, na=False)
+        ]
+
+    if df_jobs.empty:
+        st.info("No matching jobs found.")
+        st.stop()
+
+    # ---------- Display Table ----------
+    display_jobs = df_jobs[[
+        "job_role",
+        "external_job_id",
+        "experience_level",
+        "created_at"
+    ]].rename(columns={
+        "job_role": "Job Name",
+        "external_job_id": "External Job ID",
+        "experience_level": "Experience",
+        "created_at": "Created At"
+    })
+
+    st.dataframe(display_jobs, use_container_width=True, hide_index=True)
+
+    # ---------- Select Job ----------
+    selected_job_name = st.selectbox(
+        "Select Job to Manage",
+        df_jobs["job_role"].tolist()
+    )
+
+    selected_job = df_jobs[df_jobs["job_role"] == selected_job_name].iloc[0]
+    selected_vacancy_id = selected_job["id"]
+
+    st.markdown("### 📄 Job Details")
+
+    st.write(f"**External ID:** {selected_job['external_job_id']}")
+    st.write(f"**Experience:** {selected_job['experience_level']}")
+    st.write(f"**Status:** {selected_job['status']}")
+
+    st.markdown("### ➕ Add Candidate Manually")
+
+    manual_resume = st.file_uploader(
+        "Upload Resume (PDF)",
+        type=["pdf"],
+        key="manual_resume_upload"
+    )
+
+    if st.button("📤 Add Candidate to This Job"):
+
+        if not manual_resume:
+            st.error("Please upload a resume first.")
+            st.stop()
+
+        with st.spinner("Uploading candidate..."):
+
+            res = api_post(
+                "/candidates",
+                data={
+                    "external_job_id": selected_job["external_job_id"],
+                    "name": "",
+                    "email": "",
+                    "phone": ""
+                },
+                files={"resume": manual_resume}
+            )
+
+            if res.status_code == 200 and res.json().get("success"):
+                st.success("✅ Candidate added successfully!")
+            else:
+                st.error("❌ Failed to add candidate")
+                st.text(res.text)
+
 
 # =========================
 # PAGE 2 — PIPELINE DASHBOARD
@@ -620,6 +705,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
