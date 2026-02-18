@@ -14,7 +14,7 @@ router = APIRouter()
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-MAX_QUESTIONS = 5
+MAX_QUESTIONS = 10
 
 
 
@@ -184,13 +184,13 @@ You are a senior human interviewer conducting a REAL hiring interview.
 INTERVIEW CONTEXT
 ━━━━━━━━━━━━━━━━━━━━━━
 Job Role: {vacancy_data['job_role']}
-Experience Level Target: {vacancy_data['experience_level']}
-Required Skills: {', '.join(vacancy_data['required_skills'])}
+Experience Level Target: {vacancy_data.get('experience_level', 'Not specified')}
+Required Skills: {', '.join(vacancy_data.get('required_skills', [])) if vacancy_data.get('required_skills') else 'Not specified'}
 Job Description:
 {vacancy_data.get('description', 'N/A')}
-
+Culture Traits: {', '.join(vacancy_data.get('culture_traits', [])) if vacancy_data.get('culture_traits') else 'Not specified'}
 Candidate Resume:
-{candidate_data.get('resume_text', '')}
+{candidate_data.get('resume_text', 'Resume not available')}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 INTERVIEW STATE
@@ -360,25 +360,33 @@ You are a senior hiring panel conducting a final interview evaluation.
 Your task is to evaluate the candidate’s interview performance
 in relation to the job requirements and their resume background.
 
-Job Context:
-- Role: {vacancy_data['job_role']}
-- Experience Level: {vacancy_data['experience_level']}
-- Required Skills: {', '.join(vacancy_data['required_skills'])}
-- Culture Traits: {', '.join(vacancy_data['culture_traits'])}
-- Job Description: {vacancy_data.get('description', 'N/A')}
+━━━━━━━━━━━━━━━━━━━━━━
+JOB CONTEXT
+━━━━━━━━━━━━━━━━━━━━━━
+Role: {vacancy_data['job_role']}
+Experience Level Target: {vacancy_data.get('experience_level', 'Not specified')}
+Required Skills: {', '.join(vacancy_data.get('required_skills', [])) if vacancy_data.get('required_skills') else 'Not specified'}
+Culture Traits: {', '.join(vacancy_data.get('culture_traits', [])) if vacancy_data.get('culture_traits') else 'Not specified'}
+Job Description:
+{vacancy_data.get('description', 'N/A')}
 
-Candidate Resume (BACKGROUND ONLY — NOT PROOF):
+━━━━━━━━━━━━━━━━━━━━━━
+CANDIDATE DATA
+━━━━━━━━━━━━━━━━━━━━━━
+Resume (BACKGROUND ONLY — NOT PROOF):
 {candidate_data.get('resume_text', '')}
 
 Interview Transcript (PRIMARY EVIDENCE):
 {transcript_text}
 
-EVALUATION RULES (STRICT):
+━━━━━━━━━━━━━━━━━━━━━━
+EVALUATION RULES (STRICT)
+━━━━━━━━━━━━━━━━━━━━━━
 1. Base scores PRIMARILY on interview answers.
 2. Resume may be used ONLY to:
    - check consistency
-   - validate claims made during the interview
-3. If a skill appears on the resume but is NOT demonstrated in interview → do NOT reward it.
+   - validate claims made during interview
+3. If a skill appears on resume but is NOT demonstrated → do NOT reward it.
 4. Penalize:
    - vague responses
    - buzzwords without explanation
@@ -387,28 +395,62 @@ EVALUATION RULES (STRICT):
    - clear reasoning
    - concrete examples
    - decision trade-offs
-   - ownership and real-world thinking
-6. Be strict, fair, and realistic — as if a real hiring decision depends on this.
-7. Scores must be internally consistent.
-8. Recommendation must naturally follow performance.
-9. Do NOT reference numeric cutoffs or hiring rules.
+   - ownership
+6. Be strict, realistic, and conservative.
+7. Do NOT inflate scores.
 
-SCORING CALIBRATION (INTERNAL — DO NOT MENTION):
-- 90–100 → Exceptional, interview-ready hire
-- 80–89 → Strong candidate with minor gaps
-- 65–79 → Partial fit, needs improvement
-- <65 → Not suitable for this role
+━━━━━━━━━━━━━━━━━━━━━━
+SCORING SYSTEM (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━
 
-RETURN STRICT JSON ONLY:
-{{
-  "skill_score": <0-100>,
-  "communication_score": <0-100>,
-  "problem_solving_score": <0-100>,
-  "culture_fit_score": <0-100>,
-  "overall_score": <0-100>,
+Each category MUST be scored out of 25.
+
+Categories:
+- Skill (0–25)
+- Communication (0–25)
+- Problem Solving (0–25)
+- Culture Fit (0–25)
+
+⚠️ Hard Constraints:
+- No category can exceed 25.
+- No decimals.
+- No negative values.
+
+━━━━━━━━━━━━━━━━━━━━━━
+OVERALL SCORE
+━━━━━━━━━━━━━━━━━━━━━━
+
+Overall Score MUST equal:
+
+Skill + Communication + Problem Solving + Culture Fit
+
+Overall MUST be out of 100.
+It MUST be the exact mathematical sum.
+
+━━━━━━━━━━━━━━━━━━━━━━
+RECOMMENDATION LOGIC
+━━━━━━━━━━━━━━━━━━━━━━
+
+80–100 → Strong Fit  
+70–79  → Moderate Fit  
+Below 70 → Not Recommended  
+
+Do NOT mention numeric cutoffs in output.
+
+━━━━━━━━━━━━━━━━━━━━━━
+RETURN STRICT JSON ONLY
+━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "skill": <0-25>,
+  "communication": <0-25>,
+  "problem_solving": <0-25>,
+  "culture_fit": <0-25>,
+  "overall": <0-100>,
   "recommendation": "<Strong Fit | Moderate Fit | Not Recommended>",
-  "evaluation_notes": "<short explanation>"
-}}
+  "evaluation_notes": "<3-5 sentence professional explanation>"
+}
+
     """
 
     raw = ai_service.generate_completion(eval_prompt)
