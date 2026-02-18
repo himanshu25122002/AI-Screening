@@ -183,10 +183,10 @@ if page == "📥 HR Intake":
                     "experience_level": f"{experience_years} years",
                     "culture_traits": [c.strip() for c in culture.split(",")] if culture else [],
                     "description": f"""
-Job Summary:
+=== Job Summary: ===
 {job_summary}
 
-Key Responsibilities:
+=== Key Responsibilities: ===
 {key_responsibilities}
 """,
                     "created_by": "hr@company.com"
@@ -716,6 +716,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
