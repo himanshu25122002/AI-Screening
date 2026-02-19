@@ -139,7 +139,7 @@ async def create_candidate(
 
         # ---------- AI fallback ONLY if regex failed ----------
         if not extracted_email:
-            extracted_email = ai_service.extract_email_from_resume(resume_text)
+            extracted_email = ai_service.extract_email(resume_text)
 
         if not extracted_email:
             raise HTTPException(
@@ -544,6 +544,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
