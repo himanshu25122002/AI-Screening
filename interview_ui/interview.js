@@ -91,6 +91,7 @@ const timerEl = document.getElementById("timer");
 const videoEl = document.getElementById("camera");
 console.log("🎥 videoEl =", videoEl);
 /* ================= FULLSCREEN ENFORCEMENT ================= */
+/*
 function requestFullscreen() {
   const el = document.documentElement;
   if (el.requestFullscreen) el.requestFullscreen();
@@ -128,12 +129,12 @@ document.addEventListener("fullscreenchange", () => {
 
     pauseInterviewForFullscreen();
   }
-});
+});*/
 
 
 
 /* ================= TAB SWITCH DETECTION ================= */
-document.addEventListener("visibilitychange", () => {
+/*document.addEventListener("visibilitychange", () => {
   if (interviewCompleted || interviewPausedForFullscreen) return;
 
   if (document.hidden) {
@@ -150,7 +151,7 @@ document.addEventListener("visibilitychange", () => {
       finishInterview(true);
     }
   }
-});
+});*/
 
 
 /* ================= TIMER ================= */
@@ -230,7 +231,7 @@ recognition.onend = () => {
 };
 
 /* ================= CAMERA (MANDATORY) ================= */
-async function initCamera() {
+/*async function initCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: "user" },
@@ -257,7 +258,7 @@ async function initCamera() {
     finishInterview(true);
   }
 }
-
+*/
 /* ================= FETCH QUESTION ================= */
 async function fetchQuestion(answer = null) {
   if (interviewCompleted || interviewPaused) return;
@@ -382,7 +383,7 @@ function finishInterview(force = false) {
 
 
 /* ================= ML ANTI-CHEAT (STABLE VERSION) ================= */
-
+/*
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 
@@ -445,11 +446,11 @@ function terminateInterview(reason) {
     alert(`❌ ${reason}`);
     finishInterview(true);
   }, 100);
-}
+}*/
 
 
 /* ---------- FACE MESH (RELAXED EYE TRACKING) ---------- */
-const faceMesh = new FaceMesh({
+/*const faceMesh = new FaceMesh({
   locateFile: (file) => 
     `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
 });
@@ -473,12 +474,12 @@ let dyHistory = [];
 const SMOOTHING_WINDOW = 10;
 
 faceMesh.onResults((res) => {
-  const faces = res.multiFaceLandmarks;
+  const faces = res.multiFaceLandmarks;*/
 
   /* =======================
      NO FACE DETECTION
   ======================= */
-  if (!faces || faces.length === 0) {
+  /*if (!faces || faces.length === 0) {
     noFaceFrames++;
     multiFaceFrames = 0;
     lookAwayFrames = 0;
@@ -489,12 +490,12 @@ faceMesh.onResults((res) => {
     return;
   } else {
     noFaceFrames = 0;
-  }
+  }*/
 
   /* =======================
      MULTIPLE FACE DETECTION
   ======================= */
-  if (faces.length > 1) {
+  /*if (faces.length > 1) {
     multiFaceFrames++;
     lookAwayFrames = 0;
 
@@ -561,11 +562,11 @@ if (deltaX > MAX_DELTA_X || deltaY > MAX_DELTA_Y) {
 if (lookAwayFrames >= 45) {
   issueWarning("Please look at the screen");
 }
-});  
+});  */
 
 
 /* ---------- CAMERA PIPELINE ---------- */
-const mlCamera = new Camera(videoEl, {
+/*const mlCamera = new Camera(videoEl, {
   onFrame: async () => {
     await faceMesh.send({ image: videoEl });
   },
@@ -573,11 +574,11 @@ const mlCamera = new Camera(videoEl, {
   height: 480,
 });
 
+*/
 
 
 
-
-
+/*
 document.getElementById("resumeFullscreenBtn").onclick = async () => {
   await document.documentElement.requestFullscreen();
 
@@ -602,7 +603,7 @@ document.getElementById("resumeFullscreenBtn").onclick = async () => {
 
   startTimer();
 
-};
+};*/
 
 
 
@@ -623,12 +624,12 @@ window.addEventListener("DOMContentLoaded", () => {
       await validateInterviewToken();
 
       console.log("🚀 Interview started");
-      requestFullscreen();
+      /*requestFullscreen();*/
 
       interviewStarted = true;
       document.getElementById("startScreen")?.remove();
 
-      await initCamera();
+      /*await initCamera();
 
       await new Promise(resolve => {
         if (videoEl.readyState >= 2) return resolve();
@@ -636,7 +637,7 @@ window.addEventListener("DOMContentLoaded", () => {
       });
 
       console.log("📸 Starting ML pipeline");
-      mlCamera.start();
+      mlCamera.start();*/
 
       fetchQuestion();
     } catch (e) {
