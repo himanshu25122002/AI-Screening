@@ -127,7 +127,7 @@ def next_question(payload: InterviewPayload):
 
     # 2️⃣ Stop if interview completed
     # Stop if interview finished
-    if question_count >= MAX_QUESTIONS:
+    if question_count == MAX_QUESTIONS:
         return {"completed": True}
 
 
