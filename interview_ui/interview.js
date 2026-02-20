@@ -59,32 +59,27 @@ async function validateInterviewToken() {
   const token = new URLSearchParams(window.location.search).get("token");
 
   if (!token) {
-    showStatus("Invalid interview link");
-    return;
+    alert("Invalid interview link");
+    throw new Error("Token missing");
   }
 
   const res = await fetch(`${API_BASE}/ai-interview/validate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({ token })
   });
 
   if (!res.ok) {
-    showStatus("Interview expired or invalid");
-    return;
+    const errorText = await res.text();
+    console.error("Validation failed:", errorText);
+    alert("Interview expired or invalid.");
+    throw new Error("Validation failed");
   }
 
   const data = await res.json();
-
-  if (data.status === "not_started") {
-    showStatus("Interview not started yet");
-    return;
-  }
-
-  if (data.status === "expired") {
-    showStatus("Interview link expired");
-    return;
-  }
+  console.log("VALIDATION RESPONSE:", data);
 
   candidateId = data.candidate_id;
 }
@@ -291,7 +286,11 @@ async function fetchQuestion(answer = null) {
     });
 
     const data = await res.json();
-
+    if (!data.question && !data.completed) {
+      console.error("Invalid question response:", data);
+      alert("Interview session error. Please refresh.");
+      return;
+    }
     if (data.completed) {
       interviewCompleted = true;
       clearInterval(timerInterval);
@@ -637,29 +636,27 @@ window.addEventListener("DOMContentLoaded", () => {
   console.log("✅ Start Interview button ready");
 
   startBtn.addEventListener("click", async () => {
+
+    if (interviewStarted) return;  // prevent multiple clicks
+
+    interviewStarted = true;
+
+    startBtn.innerText = "Starting...";
+    startBtn.disabled = true;
+
     try {
-      console.log("🔐 Validating interview token...");
       await validateInterviewToken();
 
-      console.log("🚀 Interview started");
-      /*requestFullscreen();*/
-
-      interviewStarted = true;
       document.getElementById("startScreen")?.remove();
 
-      /*await initCamera();
-
-      await new Promise(resolve => {
-        if (videoEl.readyState >= 2) return resolve();
-        videoEl.onloadeddata = () => resolve();
-      });
-
-      console.log("📸 Starting ML pipeline");
-      mlCamera.start();*/
-
       fetchQuestion();
+
     } catch (e) {
       console.error(e);
+
+      interviewStarted = false;      // allow retry
+      startBtn.innerText = "Start Interview";
+      startBtn.disabled = false;
     }
   });
 });
