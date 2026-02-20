@@ -440,8 +440,8 @@ Do NOT mention numeric cutoffs in output.
 ━━━━━━━━━━━━━━━━━━━━━━
 RETURN STRICT JSON ONLY
 ━━━━━━━━━━━━━━━━━━━━━━
-
-{
+Return JSON in this format:
+{{
   "skill": <0-25>,
   "communication": <0-25>,
   "problem_solving": <0-25>,
@@ -449,7 +449,7 @@ RETURN STRICT JSON ONLY
   "overall": <0-100>,
   "recommendation": "<Strong Fit | Moderate Fit | Not Recommended>",
   "evaluation_notes": "<3-5 sentence professional explanation>"
-}
+}}
 
     """
 
