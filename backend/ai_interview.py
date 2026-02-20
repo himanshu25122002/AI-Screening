@@ -424,7 +424,7 @@ Overall Score MUST equal:
 
 Skill + Communication + Problem Solving + Culture Fit
 
-Overall MUST be out of 100.
+Overall Score MUST be out of 100.
 It MUST be the exact mathematical sum.
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -442,11 +442,11 @@ RETURN STRICT JSON ONLY
 ━━━━━━━━━━━━━━━━━━━━━━
 Return JSON in this format:
 {{
-  "skill": <0-25>,
-  "communication": <0-25>,
-  "problem_solving": <0-25>,
-  "culture_fit": <0-25>,
-  "overall": <0-100>,
+  "skill_score": <0-25>,
+  "communication_score": <0-25>,
+  "problem_solving_score": <0-25>,
+  "culture_fit_score": <0-25>,
+  "overall_score": <0-100>,
   "recommendation": "<Strong Fit | Moderate Fit | Not Recommended>",
   "evaluation_notes": "<3-5 sentence professional explanation>"
 }}
@@ -459,11 +459,11 @@ Return JSON in this format:
         evaluation = json.loads(raw)
     except Exception:
         evaluation = {
-            "skill_score": 70,
-            "communication_score": 70,
-            "problem_solving_score": 70,
-            "culture_fit_score": 70,
-            "overall_score": 70,
+            "skill_score": 15,
+            "communication_score": 15,
+            "problem_solving_score": 15,
+            "culture_fit_score": 15,
+            "overall_score": 60,
             "recommendation": "Moderate Fit",
             "evaluation_notes": "Fallback evaluation"
         }
