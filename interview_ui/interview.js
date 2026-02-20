@@ -40,6 +40,13 @@ const MAX_TAB_SWITCH = 3;
 const MAX_CAMERA_FAIL = 3;
 let interviewStarted = false;
 
+function showStatus(message) {
+  const startBtn = document.getElementById("startInterviewBtn");
+  startBtn.innerText = message;
+  startBtn.disabled = true;
+}
+
+
 function hardStopTTS(reason = "") {
   try {
     speechSynthesis.cancel();
@@ -52,25 +59,36 @@ async function validateInterviewToken() {
   const token = new URLSearchParams(window.location.search).get("token");
 
   if (!token) {
-    alert("Invalid interview link");
+    showStatus("Invalid interview link");
     return;
   }
 
   const res = await fetch(`${API_BASE}/ai-interview/validate`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ token })   // 🔥 THIS LINE FIXES 422
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token })
   });
 
   if (!res.ok) {
-    throw new Error("Interview validation failed");
+    showStatus("Interview expired or invalid");
+    return;
   }
 
   const data = await res.json();
+
+  if (data.status === "not_started") {
+    showStatus("Interview not started yet");
+    return;
+  }
+
+  if (data.status === "expired") {
+    showStatus("Interview link expired");
+    return;
+  }
+
   candidateId = data.candidate_id;
 }
+
 
 
 
