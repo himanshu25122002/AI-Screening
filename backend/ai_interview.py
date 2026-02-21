@@ -14,7 +14,7 @@ router = APIRouter()
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-MAX_QUESTIONS = 2
+MAX_QUESTIONS = 10
 
 
 
@@ -258,7 +258,7 @@ CRITICAL INTERVIEW RULES (NON-NEGOTIABLE)
    - Later questions → ownership, failure, judgment, impact
 
 7️⃣ INTERVIEW LENGTH
-   - The interview has NO fixed number of questions.
+   - The interview has 10 number of questions.
    - Continue naturally until stopped externally.
 
 ━━━━━━━━━━━━━━━━━━━━━━
