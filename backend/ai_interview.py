@@ -14,7 +14,7 @@ router = APIRouter()
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-MAX_QUESTIONS = 10
+MAX_QUESTIONS = 2
 
 
 
@@ -125,10 +125,12 @@ def next_question(payload: InterviewPayload):
         transcript = session.get("transcript", [])
     
 
-    # 2️⃣ Stop if interview completed
-    # Stop if interview finished
-    if question_count == MAX_QUESTIONS:
-        return {"completed": True}
+    # If last question answer just submitted → trigger evaluation
+    if question_count >= MAX_QUESTIONS:
+        return {
+            "completed": True,
+            "message": "Interview completed. Generating final evaluation..."
+        }
 
 
 
