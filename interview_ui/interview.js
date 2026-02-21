@@ -292,7 +292,6 @@ async function fetchQuestion(answer = null) {
       return;
     }
     if (data.completed) {
-      interviewCompleted = true;
       clearInterval(timerInterval);
       speechSynthesis.cancel();
 
