@@ -527,16 +527,19 @@ if page == "📝 Candidate Forms":
     ]].copy()
     display_df = df.copy()
     
-    """
+    
     display_df["Candidate Name"] = (
         display_df["first_name"].fillna("") + " " + display_df["last_name"].fillna("")
     )
 
-    default_columns = display_df[[
+    display_df = display_df[[
         "Candidate Name",
         "email_form",
         "phone_form",
         "Job Name",
+        "address",
+        "city",
+        "state"
         "years_of_experience",
         "current_ctc",
         "expected_ctc",
@@ -553,7 +556,7 @@ if page == "📝 Candidate Forms":
         "portfolio_link": "Portfolio",
         "created_at_form": "Submitted At"
     })
-    """
+    
     st.dataframe(
         display_df,
         use_container_width=True,
@@ -717,6 +720,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
