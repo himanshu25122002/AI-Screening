@@ -394,11 +394,11 @@ if page == "📊 Hiring Pipeline":
     }
 
 
-    df["Stage"] = df["status"].map(stage_map)
+    df["Status"] = df["status"].map(stage_map)
     df["Resume Score"] = df["screening_score"]
     df["Applied At"] = pd.to_datetime(df["created_at"]).dt.strftime("%d-%m-%Y %H:%M")
     display_df = df[
-        ["name", "email", "Job Name", "Resume Score", "Stage", "Applied At"]
+        ["name", "email", "Job Name", "Resume Score", "Status", "Applied At"]
     ].rename(columns={
         "name": "Candidate Name",
         "email": "Email"
@@ -524,6 +524,7 @@ if page == "📝 Candidate Forms":
         "portfolio_link",
         "created_at_form"
     ]].copy()
+    display_df = df.copy()
 
     display_df["Candidate Name"] = (
         display_df["first_name"].fillna("") + " " + display_df["last_name"].fillna("")
@@ -716,6 +717,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
