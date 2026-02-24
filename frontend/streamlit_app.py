@@ -537,9 +537,9 @@ if page == "📝 Candidate Forms":
         "email_form",
         "phone_form",
         "Job Name",
-        "address",
-        "city",
-        "state"
+        "gender",
+        "age",
+        "state",
         "years_of_experience",
         "current_ctc",
         "expected_ctc",
@@ -720,6 +720,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
