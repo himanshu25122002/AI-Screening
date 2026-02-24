@@ -553,18 +553,6 @@ if page == "📝 Candidate Forms":
         "created_at_form": "Submitted At"
     })
 
-
-"""
-    st.dataframe(
-        display_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            col: st.column_config.Column(hidden=(col not in default_columns))
-            for col in display_df.columns
-        }
-    )
-    """
     st.data_editor(
         display_df,
         use_container_width=True,
@@ -573,7 +561,7 @@ if page == "📝 Candidate Forms":
             col for col in display_df.columns
             if col not in default_columns
         ]
-    )
+    )   
 
 # =========================
 # PAGE 4 — AI INTERVIEW RESULTS (PRODUCTION)
@@ -732,6 +720,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
