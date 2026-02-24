@@ -526,7 +526,8 @@ if page == "📝 Candidate Forms":
         "created_at_form"
     ]].copy()
     display_df = df.copy()
-   """
+    
+    """
     display_df["Candidate Name"] = (
         display_df["first_name"].fillna("") + " " + display_df["last_name"].fillna("")
     )
@@ -716,6 +717,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
