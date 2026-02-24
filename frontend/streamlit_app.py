@@ -531,7 +531,7 @@ if page == "📝 Candidate Forms":
     display_df["Candidate Name"] = (
         display_df["first_name"].fillna("") + " " + display_df["last_name"].fillna("")
     )
-    display_df["created_at_form"] = pd.to_datetime(display_df["created_at_form"]).dt.strftime("%d-%m-%Y %H:%M")
+    display_df["created_at_form"] = pd.to_datetime(display_df["created_at_form"], utc=True).dt.tz_convert("Asia/Kolkata").dt.strftime("%d-%m-%Y %H:%M")
     display_df = display_df[[
         "Candidate Name",
         "email_form",
@@ -728,6 +728,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
