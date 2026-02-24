@@ -390,7 +390,7 @@ if page == "📊 Hiring Pipeline":
         "interview_started": "🎙 AI Interview Started",
         "interview_completed": "🎙 AI Interview Done",
         "recommended": "🏁 Final Interview",
-        "rejected": "❌ Rejected"
+        "rejected": "❌ Rejected in Interview"
     }
 
 
@@ -716,6 +716,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
