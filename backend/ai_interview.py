@@ -14,7 +14,7 @@ router = APIRouter()
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-MAX_QUESTIONS = 10
+MAX_QUESTIONS = 5
 
 
 
@@ -208,21 +208,22 @@ Previous Answer (if any):
 Previously Asked Questions:
 {[t['question'] for t in transcript]}
 
-━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL INTERVIEW RULES (NON-NEGOTIABLE)
-━━━━━━━━━━━━━━━━━━━━━━
 
-1️⃣ ASK EXACTLY ONE QUESTION.
-   - No explanations
-   - No commentary
-   - No formatting
+INTERVIEW STYLE RULES
 
-2️⃣ NEVER repeat:
+1. Ask simple, clear, human-friendly questions.
+3. Avoid very long scenario descriptions.
+4. Avoid multi-part questions.
+5. Ask practical but moderate difficulty questions.
+6. Keep tone natural and conversational.
+7. Do not overcomplicate.
+
+ NEVER repeat:
    - A previously asked question
    - The same project, example, or scenario twice
    - The same skill focus twice in a row
 
-3️⃣ TOPIC ROTATION (MANDATORY)
+ TOPIC ROTATION (MANDATORY)
    You MUST rotate topics across questions.
    Choose ONE topic per question from the list below, ensuring diversity:
 
@@ -238,7 +239,7 @@ CRITICAL INTERVIEW RULES (NON-NEGOTIABLE)
 
    ❗ If the last question was about a project, the next question MUST NOT be about the same project.
 
-4️⃣ ADAPT BASED ON LAST ANSWER (MANDATORY)
+ ADAPT BASED ON LAST ANSWER (MANDATORY)
    - If last answer was strong:
      → Increase difficulty, add constraints, edge cases, or scale
    - If last answer was weak or vague:
@@ -246,19 +247,17 @@ CRITICAL INTERVIEW RULES (NON-NEGOTIABLE)
    - If last answer avoided the question:
      → Ask a more concrete, scenario-based follow-up
 
-5️⃣ QUESTION QUALITY RULES
+ QUESTION QUALITY RULES
    - Prefer “How did you…”, “Why did you choose…”, “What would you do if…”
-   - Prefer scenario-based and experience-driven questions
-   - Avoid theory-only or textbook questions
    - Avoid generic HR questions
 
-6️⃣ INTERVIEW FLOW (HUMAN-LIKE)
+ INTERVIEW FLOW (HUMAN-LIKE)
    - Early questions → verify resume claims & fundamentals
    - Middle questions → real work, problem solving, decisions
    - Later questions → ownership, failure, judgment, impact
 
-7️⃣ INTERVIEW LENGTH
-   - The interview has 10 number of questions.
+ INTERVIEW LENGTH
+   - The interview has 5 number of questions.
    - Continue naturally until stopped externally.
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -389,17 +388,12 @@ EVALUATION RULES (STRICT)
    - check consistency
    - validate claims made during interview
 3. If a skill appears on resume but is NOT demonstrated → do NOT reward it.
-4. Penalize:
-   - vague responses
-   - buzzwords without explanation
-   - theoretical answers without practical examples
-5. Reward:
-   - clear reasoning
-   - concrete examples
-   - decision trade-offs
-   - ownership
-6. Be strict, realistic, and conservative.
-7. Do NOT inflate scores.
+4. Be fair and balanced.
+5. Reward effort and clarity.
+6. Do not overly penalize minor gaps.
+7. Consider candidate potential.
+8. Be practical, not harsh.
+9. Avoid extreme scoring unless performance is clearly poor.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 SCORING SYSTEM (MANDATORY)
