@@ -511,7 +511,7 @@ if page == "📝 Candidate Forms":
     # =========================
     # DISPLAY TABLE
     # =========================
-    """
+    
     display_df = df[[
         "first_name",
         "last_name",
@@ -531,7 +531,7 @@ if page == "📝 Candidate Forms":
         display_df["first_name"].fillna("") + " " + display_df["last_name"].fillna("")
     )
 
-    display_df = display_df[[
+    default_columns = display_df[[
         "Candidate Name",
         "email_form",
         "phone_form",
@@ -558,47 +558,14 @@ if page == "📝 Candidate Forms":
     st.dataframe(
         display_df,
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
+        column_config={
+            col: st.column_config.Column(hidden=(col not in default_columns))
+            for col in display_df.columns
+        }
     )
-    """
+    
 
-    # Rename columns properly
-    df = df.rename(columns={
-        "email_form": "Email",
-        "phone_form": "Phone",
-        "years_of_experience": "Experience (Years)",
-        "current_ctc": "Current CTC",
-        "expected_ctc": "Expected CTC",
-        "notice_period": "Notice Period (Days)",
-        "portfolio_link": "Portfolio",
-        "created_at_form": "Submitted At",
-    })
-
-    df["Candidate Name"] = (
-        df["first_name"].fillna("") + " " + df["last_name"].fillna("")
-    )
-
-    priority_columns = [
-        "Candidate Name",
-        "Email",
-        "Phone",
-        "Job Name",
-        "Experience (Years)",
-        "Current CTC",
-        "Expected CTC",
-        "Notice Period (Days)",
-        "Portfolio",
-        "Submitted At"
-    ]
-
-    other_columns = [col for col in df.columns if col not in priority_columns]
-    df = df[priority_columns + other_columns]
-
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True
-    )
 # =========================
 # PAGE 4 — AI INTERVIEW RESULTS (PRODUCTION)
 # =========================
@@ -756,6 +723,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
