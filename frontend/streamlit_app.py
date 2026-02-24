@@ -559,7 +559,7 @@ if page == "📝 Candidate Forms":
 
     if "Portfolio" in display_df.columns:
         display_df["Portfolio"] = display_df["Portfolio"].apply(
-            lambda x: f"Open Portfolio({x})" if pd.notnull(x) and str(x).startswith("http") else x
+            lambda x: f"{x}" if pd.notnull(x) and str(x).startswith("http") else x
         )
         
     st.dataframe(
@@ -728,6 +728,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
