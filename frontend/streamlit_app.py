@@ -396,7 +396,7 @@ if page == "📊 Hiring Pipeline":
 
     df["Status"] = df["status"].map(stage_map)
     df["Resume Score"] = df["screening_score"]
-    df["Applied At"] = pd.to_datetime(df["created_at"]).dt.strftime("%d-%m-%Y %H:%M")
+    df["Applied At"] = pd.to_datetime(df["created_at"], utc=True).dt.tz_convert("Asia/Kolkata").dt.strftime("%d-%m-%Y %H:%M")
     display_df = df[
         ["name", "email", "Job Name", "Resume Score", "Status", "Applied At"]
     ].rename(columns={
@@ -728,6 +728,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
