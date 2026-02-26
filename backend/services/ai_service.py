@@ -525,7 +525,9 @@ OUTPUT FORMAT (STRICT JSON ONLY)
     # == =======================
     # AUTO SEND GOOGLE FORM
     # =========================
-        if screening_score >= 85:
+        resume_cutoff = vacancy_data.get("resume_cutoff_score") or 80
+
+        if screening_score >= resume_cutoff:
             email_service.send_form_invitation(
                 candidate_id,
                 candidate_data["email"],
@@ -541,6 +543,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
