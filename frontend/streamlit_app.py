@@ -456,6 +456,43 @@ if page == "📊 Hiring Pipeline":
         hide_index=True
     )
 
+    st.markdown("### 🔧 Manual Status Override")
+
+    selected_candidate_name = st.selectbox(
+        "Select Candidate",
+        display_df["Candidate Name"].tolist()
+    )
+
+    candidate_row = df[df["name"] == selected_candidate_name].iloc[0]
+    candidate_id = candidate_row["id"]
+
+    status_options = [
+        "new",
+        "screened",
+        "form_sent",
+        "form_completed",
+        "interview_sent",
+        "interview_started",
+        "interview_completed",
+        "recommended",
+        "rejected"
+    ]
+
+    new_status = st.selectbox("Change Status To", status_options)
+
+    if st.button("Update Status"):
+        res = requests.put(
+            f"{BACKEND_URL}/candidates/{candidate_id}/status",
+            params={"new_status": new_status}
+        )
+
+        if res.status_code == 200:
+            st.success("✅ Status updated successfully!")
+            st.rerun()
+        else:
+            st.error("❌ Failed to update status")
+            st.text(res.text)
+
 # =========================
 # PAGE 3 — CANDIDATE FORMS
 # =========================
@@ -774,6 +811,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
