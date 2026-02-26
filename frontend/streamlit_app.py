@@ -105,9 +105,9 @@ st.sidebar.title("🧭 Navigation")
 
 page = st.sidebar.radio(
     "Select Page",
-    ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews"],
-    index=["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews"].index(st.session_state.page)
-    if st.session_state.page in ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews"]
+    ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews", "⚙️ Configuration"],
+    index=["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews", "⚙️ Configuration"].index(st.session_state.page)
+    if st.session_state.page in ["📥 HR Intake", "📊 Hiring Pipeline", "📝 Candidate Forms", "🎤 AI Interviews", "⚙️ Configuration"]
     else 0
 )
 
@@ -819,7 +819,40 @@ if page == "🎤 AI Interviews":
             st.markdown("---")
 
 
+# =========================
+# PAGE 5 — CONFIGURATION
+# =========================
+if page == "⚙️ Configuration":
 
+    st.title("⚙️ LLM Configuration")
+
+    st.markdown("Select which LLM provider to use for resume screening and AI interviews.")
+
+    llm_options = {
+        "OpenAI (GPT-5 Mini)": {"provider": "openai", "model": "gpt-5-mini"},
+        "Claude (Anthropic)": {"provider": "anthropic", "model": "claude-3-opus"},
+        "Gemini Pro": {"provider": "google", "model": "gemini-pro"},
+        "Kiwi": {"provider": "kiwi", "model": "kiwi-default"}
+    }
+
+    selected_label = st.selectbox(
+        "Select LLM Provider",
+        list(llm_options.keys())
+    )
+
+    if st.button("💾 Save Configuration"):
+        config_data = llm_options[selected_label]
+
+        res = api_post(
+            "/config/llm",
+            json=config_data
+        )
+
+        if res.status_code == 200:
+            st.success("✅ LLM configuration updated successfully!")
+        else:
+            st.error("❌ Failed to update configuration")
+            st.text(res.text)
 
 
 
