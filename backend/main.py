@@ -271,15 +271,43 @@ def get_candidate(candidate_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/candidates/{candidate_id}/status")
-def update_candidate_status(candidate_id: str, new_status: str):
+@app.post("/candidates/{candidate_id}/send-form")
+def send_google_form(candidate_id: str):
     try:
-        result = supabase.table("candidates").update({
-            "status": new_status,
-            "updated_at": datetime.utcnow().isoformat()
+        candidate = supabase.table("candidates").select("*").eq("id", candidate_id).execute().data[0]
+
+        send_google_form_email(candidate["email"], candidate["name"])
+
+        supabase.table("candidates").update({
+            "status": "form_sent"
         }).eq("id", candidate_id).execute()
 
-        return {"success": True, "data": result.data}
+        return {"success": True}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/candidates/{candidate_id}/send-final-interview")
+def send_final_interview(candidate_id: str):
+    try:
+        candidate = supabase.table("candidates").select("*").eq("id", candidate_id).execute().data[0]
+
+        job = supabase.table("vacancies").select("*").eq("id", candidate["job_id"]).execute().data[0]
+
+        calendar_link = job.get("google_calendar_link")
+
+        send_final_interview_email(
+            candidate["email"],
+            candidate["name"],
+            calendar_link
+        )
+
+        supabase.table("candidates").update({
+            "status": "final_interview_sent"
+        }).eq("id", candidate_id).execute()
+
+        return {"success": True}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -560,6 +588,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
