@@ -290,13 +290,19 @@ def send_google_form(candidate_id: str):
 @app.post("/candidates/{candidate_id}/send-final-interview")
 def send_final_interview(candidate_id: str):
     try:
-        candidate = supabase.table("candidates").select("*").eq("id", candidate_id).execute().data[0]
+        candidate = supabase.table("candidates")\
+            .select("*")\
+            .eq("id", candidate_id)\
+            .single()\
+            .execute().data
 
-        job = supabase.table("vacancies").select("*").eq("id", candidate["job_id"]).execute().data[0]
+        job = supabase.table("vacancies")\
+            .select("*")\
+            .eq("id", candidate["vacancy_id"])\
+            .single()\
+            .execute().data
 
-        calendar_link = job.get("google_calendar_link")
-
-        email_service.send_final_interview_email(
+        email_service.send_final_interview_schedule(
             candidate_id,
             candidate["email"],
             candidate["name"]
@@ -588,6 +594,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
