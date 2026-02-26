@@ -12,82 +12,33 @@ from openai import OpenAI
 
 class AIService:
     def __init__(self):
+        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
         self.model = config.AI_MODEL  
 
-    def get_active_llm():
-        config_row = supabase.table("system_config").select("*").single().execute()
-
-        provider = config_row.data.get("llm_provider", "openai")
-        model = config_row.data.get("llm_model", "gpt-5-mini")
-
-        return provider, model
-
    
-    def generate_completion(prompt: str, max_tokens: int = 1500):
+    def generate_completion(self, prompt: str, max_tokens: int = 1500) -> str:
+        if not self.client:
+            raise RuntimeError("AI client not configured")
 
-        provider, model = get_active_llm()
-
-        if provider == "openai":
-            from openai import OpenAI
-            client = OpenAI(api_key=config.OPENAI_API_KEY)
-
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_tokens
-            )
-
-            return response.choices[0].message.content
-
-        elif provider == "anthropic":
-            import anthropic
-            client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-
-            response = client.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}]
-            )
-
-            return response.content[0].text
-
-        elif provider == "google":
-            import google.generativeai as genai
-            genai.configure(api_key=config.GEMINI_API_KEY)
-
-            model_obj = genai.GenerativeModel(model)
-            response = model_obj.generate_content(
-                prompt,
-                generation_config={
-                    "max_output_tokens": max_tokens 
-                }
-            )
-
-            return response.text
-
-        else:
-            raise Exception("Unsupported LLM provider")
-
-
-    def extract_email_regex(self, text: str) -> str | None:
-        if not text:
-            return None
-
-        matches = re.findall(
-            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            text
-        )
-
-        for email in matches:
-            local = email.split("@")[0]
+        try:
         
-            if any(c.isalpha() for c in local):
-                return email
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
 
-        return None
+            text = response.choices[0].message.content
 
+            if not text or not text.strip():
+                raise RuntimeError("Empty response from AI")
 
+            return text.strip()
 
+        except Exception as e:
+            print("❌ OPENAI ERROR:", e)
+            raise
 
 
     def extract_email_ai(self, resume_text: str) -> str | None:
@@ -570,6 +521,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
