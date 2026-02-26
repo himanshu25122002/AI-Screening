@@ -461,7 +461,7 @@ if page == "📊 Hiring Pipeline":
     candidate_options = {}
 
     for _, row in df.iterrows():
-        label = f"{row['name']} ({row['email']}) — Resume Score: {row.get('resume_score', 'N/A')}"
+        label = f"{row['name']} ({row['email']}) — Resume Score: {row.get('screening_score', 'N/A')}"
         candidate_options[label] = row["id"]
 
     selected_label = st.selectbox(
@@ -817,6 +817,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
