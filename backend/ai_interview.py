@@ -507,7 +507,8 @@ Return JSON in this format:
     }).eq("candidate_id", payload.candidate_id).execute()
 
     # 5️⃣ Auto-Calendly
-    if evaluation["overall_score"] >= 80:
+    interview_cutoff = vacancy_data.get("interview_cutoff_score") or 80
+    if evaluation["overall_score"] >= interview_cutoff:
         try:
             email_service.send_final_interview_schedule(
                 payload.candidate_id,
