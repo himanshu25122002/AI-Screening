@@ -470,7 +470,6 @@ if page == "📊 Hiring Pipeline":
     )
 
     candidate_id = candidate_options[selected_label]
-    candidate_id = candidate_row["id"]
     candidate_email = candidate_row["email"]
 
     col1, col2 = st.columns(2)
@@ -818,6 +817,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
