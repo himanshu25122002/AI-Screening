@@ -154,7 +154,7 @@ class EmailService:
 
 
     # ======================================================
-    # 3️⃣ FINAL INTERVIEW (CALENDLY – AUTO)
+    # 3️⃣ FINAL INTERVIEW 
     # ======================================================
     def send_final_interview_schedule(
         self,
@@ -164,7 +164,22 @@ class EmailService:
     ):
         subject = "Final Interview – Schedule Your Slot"
 
-        calendly_link = config.CALENDLY_LINK
+        candidate_res = supabase.table("candidates") \
+            .select("vacancy_id") \
+            .eq("id", candidate_id) \
+            .single() \
+            .execute()
+        if not candidate_res.data:
+            return {"success": False, "error": "Candidate not found"}
+        vacancy_id = candidate_res.data["vacancy_id"]
+        vacancy_res = supabase.table("vacancies") \
+            .select("google_calendar_link") \
+            .eq("id", vacancy_id) \
+            .single() \
+            .execute()
+        if not vacancy_res.data or not vacancy_res.data.get("google_calendar_link"):
+            return {"success": False, "error": "No scheduling link configured for this job"}
+        calendar_link = vacancy_res.data["google_calendar_link"]
 
         html_content = f"""
         <html>
@@ -175,7 +190,7 @@ class EmailService:
 
             <p>Please book your final interview using the link below:</p>
 
-            <a href="{calendly_link}"
+            <a href="{calendar_link}"
                style="padding:12px 24px;background:#673AB7;color:#fff;text-decoration:none;border-radius:4px;">
                Schedule Final Interview
             </a>
@@ -275,6 +290,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
