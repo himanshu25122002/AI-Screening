@@ -276,7 +276,7 @@ def send_google_form(candidate_id: str):
     try:
         candidate = supabase.table("candidates").select("*").eq("id", candidate_id).execute().data[0]
 
-        send_google_form_email(candidate["email"], candidate["name"])
+        send_form_invitation(candidate["email"], candidate["name"])
 
         supabase.table("candidates").update({
             "status": "form_sent"
@@ -588,6 +588,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
