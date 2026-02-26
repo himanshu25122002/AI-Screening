@@ -309,7 +309,7 @@ def send_final_interview(candidate_id: str):
         )
 
         supabase.table("candidates").update({
-            "status": "final_interview_sent"
+            "status": "recommended"
         }).eq("id", candidate_id).execute()
 
         return {"success": True}
@@ -594,6 +594,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
