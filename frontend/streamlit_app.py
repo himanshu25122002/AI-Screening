@@ -170,17 +170,19 @@ if page == "📥 HR Intake":
                 "Resume Screening Cutoff (Default 80)",
                 min_value=0,
                 max_value=100,
-                value=0,
+                value=80,
                 help="If left 0, system will use default 85"
             )
+
         with col2:
             interview_cutoff_score = st.number_input(
                 "AI Interview Cutoff (Default 80)",
                 min_value=0,
                 max_value=100,
-                value=0,
+                value=80,
                 help="If left 0, system will use default 80"
             )
+           
 
         job_summary = st.text_area(
             "Job Summary *",
@@ -774,6 +776,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
