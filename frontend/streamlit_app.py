@@ -458,12 +458,18 @@ if page == "📊 Hiring Pipeline":
 
     st.markdown("### HR Manual Actions")
 
-    selected_candidate_name = st.selectbox(
+    candidate_options = {}
+
+    for _, row in df.iterrows():
+        label = f"{row['name']} ({row['email']}) — Resume Score: {row.get('resume_score', 'N/A')}"
+        candidate_options[label] = row["id"]
+
+    selected_label = st.selectbox(
         "Select Candidate",
-        display_df["Candidate Name"].tolist()
+        list(candidate_options.keys())
     )
 
-    candidate_row = df[df["name"] == selected_candidate_name].iloc[0]
+    candidate_id = candidate_options[selected_label]
     candidate_id = candidate_row["id"]
     candidate_email = candidate_row["email"]
 
@@ -812,6 +818,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
