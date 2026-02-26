@@ -23,7 +23,7 @@ class AIService:
         return provider, model
 
    
-    def generate_completion(prompt: str, max_tokens: int = 1200):
+    def generate_completion(prompt: str, max_tokens: int = 1500):
 
         provider, model = get_active_llm()
 
@@ -570,6 +570,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
