@@ -144,7 +144,7 @@ if page == "📥 HR Intake":
             step=1
         )
 
-        st.markdown("### 💰 Budget Range (Optional)")
+        st.markdown("### Budget Range (Optional)")
         col1, col2 = st.columns(2)
         with col1:
             budget_min = st.number_input(
@@ -164,6 +164,25 @@ if page == "📥 HR Intake":
             "Google Calendar Scheduling Link (Optional)",
             placeholder="https://calendar.google.com/..."
         )
+
+        st.markdown("### Shortlisting Criteria (Optional)")
+        col1, col2 = st.columns(2)
+        with col1:
+            resume_cutoff_score = st.number_input(
+                "Resume Screening Cutoff (Default 80)",
+                min_value=0,
+                max_value=100,
+                value=0,
+                help="If left 0, system will use default 85"
+            )
+        with col2:
+            interview_cutoff_score = st.number_input(
+                "AI Interview Cutoff (Default 80)",
+                min_value=0,
+                max_value=100,
+                value=0,
+                help="If left 0, system will use default 80"
+            )
 
         job_summary = st.text_area(
             "Job Summary *",
@@ -213,7 +232,9 @@ if page == "📥 HR Intake":
                     "created_by": "hr@company.com",
                     "budget_min": budget_min,
                     "budget_max": budget_max,
-                    "google_calendar_link": google_calendar_link
+                    "google_calendar_link": google_calendar_link,
+                    "resume_cutoff_score": resume_cutoff_score if resume_cutoff_score > 0 else None,
+                    "interview_cutoff_score": interview_cutoff_score if interview_cutoff_score > 0 else None
                 }
             )
 
@@ -755,6 +776,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
