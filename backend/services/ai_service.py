@@ -13,17 +13,15 @@ from openai import OpenAI
 class AIService:
     def __init__(self):
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
-        self.model = config.AI_MODEL  # gpt-5-mini
+        self.model = config.AI_MODEL  
 
-    # ================================
-    # 🔥 SAFE COMPLETION (RENDER SAFE)
-    # ================================
+   
     def generate_completion(self, prompt: str, max_tokens: int = 1500) -> str:
         if not self.client:
             raise RuntimeError("AI client not configured")
 
         try:
-        # GPT-5 / GPT-5-mini compatible
+        
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -543,6 +541,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
