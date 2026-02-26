@@ -144,6 +144,27 @@ if page == "📥 HR Intake":
             step=1
         )
 
+        st.markdown("### 💰 Budget Range (Optional)")
+        col1, col2 = st.columns(2)
+        with col1:
+            budget_min = st.number_input(
+                "Minimum Budget (₹)",
+                min_value=0,
+                step=1000
+            )
+
+        with col2:
+            budget_max = st.number_input(
+                "Maximum Budget (₹)",
+                min_value=0,
+                step=1000
+            )
+
+        google_calendar_link = st.text_input(
+            "Google Calendar Scheduling Link (Optional)",
+            placeholder="https://calendar.google.com/..."
+        )
+
         job_summary = st.text_area(
             "Job Summary *",
             height=120
@@ -189,7 +210,10 @@ if page == "📥 HR Intake":
 === Key Responsibilities: ===
 {key_responsibilities}
 """,
-                    "created_by": "hr@company.com"
+                    "created_by": "hr@company.com",
+                    "budget_min": budget_min,
+                    "budget_max": budget_max,
+                    "google_calendar_link": google_calendar_link
                 }
             )
 
@@ -247,11 +271,14 @@ if page == "📥 HR Intake":
     # DISPLAY TABLE
     # =========================
     display_jobs = df_jobs[
-        ["job_role", "external_job_id", "experience_level", "created_at"]
+        ["job_role", "external_job_id", "experience_level","budget_min","budget_max","google_calendar_link", "created_at"]
     ].rename(columns={
         "job_role": "Job Name",
         "external_job_id": "External Job ID",
         "experience_level": "Experience",
+        "budget_min": "Budget Min (₹)",
+        "budget_max": "Budget Max (₹)",
+        "google_calendar_link": "Calendar Link",
         "created_at": "Created At"
     })
 
@@ -728,6 +755,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
