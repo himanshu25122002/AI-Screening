@@ -177,28 +177,34 @@ class EmailService:
             .eq("id", vacancy_id) \
             .single() \
             .execute()
-        if not vacancy_res.data or not vacancy_res.data.get("google_calendar_link"):
-            return {"success": False, "error": "No scheduling link configured for this job"}
-        calendar_link = vacancy_res.data["google_calendar_link"]
+        calendar_link = None
+        if vacancy_res.data:
+            calendar_link = vacancy_res.data.get("google_calendar_link")
 
-        html_content = f"""
-        <html>
-        <body>
-            <h2>Congratulations {candidate_name} 🎉</h2>
+       if calendar_link:
+           scheduling_section = f"""
+           <p>Please book your final interview using the link below:</p>
+           <a href="{calendar_link}"
+              style="padding:12px 24px;background:#673AB7;color:#fff;text-decoration:none;border-radius:4px;">
+              Schedule Final Interview
+           </a>
+           """
+       else:
+           scheduling_section = """
+           <p><strong>Our HR team will contact you shortly to schedule your final interview.</strong></p>
+           <p>Please keep an eye on your email.</p>
+           """
 
-            <p>You’ve cleared the AI interview!</p>
-
-            <p>Please book your final interview using the link below:</p>
-
-            <a href="{calendar_link}"
-               style="padding:12px 24px;background:#673AB7;color:#fff;text-decoration:none;border-radius:4px;">
-               Schedule Final Interview
-            </a>
-
-            <p>Best regards,<br>Futuready HR</p>
-        </body>
-        </html>
-        """
+       html_content = f"""
+       <html>
+       <body>
+           <h2>Congratulations {candidate_name} 🎉</h2>
+           <p>You’ve cleared the AI interview!</p>
+           {scheduling_section}
+           <p>Best regards,<br>Futuready HR</p>
+       </body>
+       </html>
+       """
 
         return self._send_email(
             candidate_id,
@@ -290,6 +296,7 @@ class EmailService:
 
 
 email_service = EmailService()
+
 
 
 
