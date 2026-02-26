@@ -456,7 +456,7 @@ if page == "📊 Hiring Pipeline":
         hide_index=True
     )
 
-    st.markdown("### 🔧 Manual Status Override")
+    st.markdown("### HR Manual Actions")
 
     selected_candidate_name = st.selectbox(
         "Select Candidate",
@@ -465,34 +465,35 @@ if page == "📊 Hiring Pipeline":
 
     candidate_row = df[df["name"] == selected_candidate_name].iloc[0]
     candidate_id = candidate_row["id"]
+    candidate_email = candidate_row["email"]
 
-    status_options = [
-        "new",
-        "screened",
-        "form_sent",
-        "form_completed",
-        "interview_sent",
-        "interview_started",
-        "interview_completed",
-        "recommended",
-        "rejected"
-    ]
+    col1, col2 = st.columns(2)
 
-    new_status = st.selectbox("Change Status To", status_options)
+    with col1:
+        if st.button("📄 Send Google Form"):
+            res = requests.post(
+                f"{BACKEND_URL}/candidates/{candidate_id}/send-form"
+            )
 
-    if st.button("Update Status"):
-        res = requests.put(
-            f"{BACKEND_URL}/candidates/{candidate_id}/status",
-            params={"new_status": new_status}
-        )
+            if res.status_code == 200:
+                st.success("✅ Google Form sent successfully!")
+                st.rerun()
+            else:
+                st.error("❌ Failed to send form")
+                st.text(res.text)
 
-        if res.status_code == 200:
-            st.success("✅ Status updated successfully!")
-            st.rerun()
-        else:
-            st.error("❌ Failed to update status")
-            st.text(res.text)
+    with col2:
+        if st.button("📅 Send Final Interview Link"):
+            res = requests.post(
+                f"{BACKEND_URL}/candidates/{candidate_id}/send-final-interview"
+            )
 
+            if res.status_code == 200:
+                st.success("✅ Final interview link sent!")
+                st.rerun()
+            else:
+                st.error("❌ Failed to send link")
+                st.text(res.text)
 # =========================
 # PAGE 3 — CANDIDATE FORMS
 # =========================
@@ -811,6 +812,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
