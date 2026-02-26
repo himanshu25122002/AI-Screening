@@ -10,6 +10,11 @@ class VacancyCreate(BaseModel):
     description: Optional[str] = None
     created_by: str
     external_job_id: str
+    budget_min: Optional[int] = None
+    budget_max: Optional[int] = None
+    google_calendar_link: Optional[str] = None
+    resume_cutoff_score: Optional[int] = None
+    interview_cutoff_score: Optional[int] = None
 
 class VacancyResponse(BaseModel):
     id: str
@@ -86,6 +91,7 @@ class EmailRequest(BaseModel):
 
 class GoogleFormSyncRequest(BaseModel):
     sheet_id: Optional[str] = None
+
 
 
 
