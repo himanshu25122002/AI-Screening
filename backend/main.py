@@ -591,9 +591,40 @@ def get_vacancy_stats(vacancy_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/config/llm")
+def update_llm_config(payload: dict):
+    try:
+        supabase.table("system_config").delete().neq("id", "").execute()
+
+        supabase.table("system_config").insert({
+            "llm_provider": payload["provider"],
+            "llm_model": payload["model"]
+        }).execute()
+
+        return {"success": True}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/config/llm")
+def get_llm_config():
+    try:
+        res = supabase.table("system_config").select("*").single().execute()
+        return {"success": True, "data": res.data}
+    except Exception:
+        return {
+            "success": True,
+            "data": {
+                "llm_provider": "openai",
+                "llm_model": "gpt-5-mini"
+            }
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
