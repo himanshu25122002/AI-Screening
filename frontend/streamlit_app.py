@@ -144,7 +144,6 @@ if page == "📥 HR Intake":
             step=1
         )
 
-        st.markdown("### Budget Range (Optional)")
         col1, col2 = st.columns(2)
         with col1:
             budget_min = st.number_input(
@@ -165,7 +164,6 @@ if page == "📥 HR Intake":
             placeholder="https://calendar.google.com/..."
         )
 
-        st.markdown("### Shortlisting Criteria (Optional)")
         col1, col2 = st.columns(2)
         with col1:
             resume_cutoff_score = st.number_input(
@@ -776,6 +774,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
