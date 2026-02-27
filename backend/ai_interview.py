@@ -14,7 +14,6 @@ router = APIRouter()
 
 client = OpenAI(api_key=config.OPENAI_API_KEY)
 
-MAX_QUESTIONS = 5
 
 
 
@@ -83,15 +82,31 @@ def validate_interview(payload: TokenPayload):
             detail="Interview link has expired"
         )
 
-    # 6️⃣ Mark started ONCE
+    
     if not session.get("started_at"):
+
+        now_utc = datetime.now(timezone.utc)
+        vacancy_res = (
+            supabase.table("vacancies")
+            .select("interview_duration_minutes")
+            .eq("id", session["vacancy_id"])
+            .single()
+            .execute()
+        )
+
+        duration = vacancy_res.data.get("interview_duration_minutes", 15)
+
+        ends_at = now_utc + timedelta(minutes=duration)
+
         supabase.table("ai_interview_sessions").update({
-            "started_at": now_utc.isoformat()
+            "started_at": now_utc.isoformat(),
+            "ends_at": ends_at.isoformat()
         }).eq("id", session["id"]).execute()
 
     return {
         "success": True,
-        "candidate_id": session["candidate_id"]
+        "candidate_id": session["candidate_id"],
+        "ends_at": ends_at.isoformat() if not session.get("ends_at") else session["ends_at"]
     }
 
 
@@ -118,19 +133,25 @@ def next_question(payload: InterviewPayload):
 
     session = session_res.data[0]
 
+    now_utc = datetime.now(timezone.utc)
 
+    ends_at_str = session.get("ends_at")
+
+    if ends_at_str:
+        ends_at = datetime.fromisoformat(
+            ends_at_str.replace("Z", "+00:00")
+        )
+
+        if now_utc >= ends_at and payload.answer is not None:
+            return {
+                "completed": True,
+                "message": "Interview duration completed."
+            }
 
     if session:
         question_count = session["question_count"]
         transcript = session.get("transcript", [])
     
-
-    # If last question answer just submitted → trigger evaluation
-    if question_count >= MAX_QUESTIONS:
-        return {
-            "completed": True,
-            "message": "Interview completed. Generating final evaluation..."
-        }
 
 
 
