@@ -82,6 +82,8 @@ async function validateInterviewToken() {
   console.log("VALIDATION RESPONSE:", data);
 
   candidateId = data.candidate_id;
+  window.interviewEndsAt = new Date(data.ends_at);
+  startGlobalTimer();
 }
 
 
@@ -198,6 +200,31 @@ function startTimer() {
   }, 1000);
 }
 
+
+let globalTimerInterval;
+
+function startGlobalTimer() {
+  clearInterval(globalTimerInterval);
+
+  globalTimerInterval = setInterval(() => {
+    if (!window.interviewEndsAt || interviewCompleted) return;
+
+    const now = new Date();
+    const diff = window.interviewEndsAt - now;
+
+    if (diff <= 0) {
+      clearInterval(globalTimerInterval);
+      timerEl.innerText = "⏱ 00:00";
+      return;
+    }
+
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+
+    timerEl.innerText =
+      `⏳ ${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }, 1000);
+}
 /* ================= TTS ================= */
 function speak(text, onDone) {
   if (interviewPaused || interviewCompleted) return;  // 🔒 BLOCK
