@@ -205,8 +205,17 @@ CURRENT EMAIL:
             ]):
                 continue
 
+            COMMON_TITLE_WORDS = {
+                "developer", "engineer", "intern", "manager",
+                "designer", "analyst", "consultant",
+                "specialist", "architect", "lead",
+                "stack", "software", "web", "data"
+            }
+
             if re.match(r"^[A-Za-z]+(?:\s[A-Za-z]+){1,3}$", line):
-                return line
+                words = line.lower().split()
+                if not any(w in COMMON_TITLE_WORDS for w in words):
+                    return line
 
         return None
 
@@ -521,6 +530,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
