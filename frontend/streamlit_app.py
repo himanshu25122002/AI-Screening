@@ -182,6 +182,19 @@ if page == "📥 HR Intake":
             )
            
 
+        interview_duration_minutes = st.number_input(
+            "AI Interview Duration (minutes) *",
+            min_value=5,
+            max_value=60,
+            value=15
+        )
+
+        interview_custom_prompt = st.text_area(
+            "Custom AI Interview Prompt (Optional)",
+            height=120,
+            help="You can add mandatory questions, themes, or special instructions."
+        )
+        
         job_summary = st.text_area(
             "Job Summary *",
             height=120
@@ -247,7 +260,9 @@ if page == "📥 HR Intake":
                     "google_calendar_link": google_calendar_link,
                     "resume_cutoff_score": resume_cutoff_score if resume_cutoff_score > 0 else None,
                     "interview_cutoff_score": interview_cutoff_score if interview_cutoff_score > 0 else None,
-                    "resume_evaluation_criteria": resume_dict if resume_dict else None
+                    "resume_evaluation_criteria": resume_dict if resume_dict else None,
+                    "interview_duration_minutes": interview_duration_minutes,
+                    "interview_custom_prompt": interview_custom_prompt if interview_custom_prompt else None
                 }
             )
 
@@ -832,6 +847,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
