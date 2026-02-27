@@ -7,24 +7,21 @@ if (window.location.protocol !== "https:") {
   alert("Secure connection required");
 }
 
-
 console.log("✅ interview.js loaded");
+
 window.addEventListener("unhandledrejection", (e) => {
   console.error("❌ Unhandled promise rejection:", e.reason);
 });
 
 const API_BASE = "https://ai-screening-wbb0.onrender.com";
-
 const params = new URLSearchParams(window.location.search);
 const token = params.get("token");
 let candidateId = null;
-
 
 if (!token) {
   alert("Invalid interview link");
   throw new Error("token missing");
 }
-
 
 let interviewCompleted = false;
 let interviewPaused = false;
@@ -34,11 +31,14 @@ let cameraFailureCount = 0;
 let interviewPausedForFullscreen = false;
 let lastQuestionText = null;
 
-
 const MAX_FULLSCREEN_EXIT = 3;
 const MAX_TAB_SWITCH = 3;
 const MAX_CAMERA_FAIL = 3;
+
 let interviewStarted = false;
+
+// Question counter for UI
+let questionCount = 0;
 
 function showStatus(message) {
   const startBtn = document.getElementById("startInterviewBtn");
@@ -46,14 +46,12 @@ function showStatus(message) {
   startBtn.disabled = true;
 }
 
-
 function hardStopTTS(reason = "") {
   try {
     speechSynthesis.cancel();
-    console.warn("🛑 TTS force-stopped", reason);
+    console.warn("🔴 TTS force-stopped", reason);
   } catch {}
 }
-
 
 async function validateInterviewToken() {
   const token = new URLSearchParams(window.location.search).get("token");
@@ -80,94 +78,63 @@ async function validateInterviewToken() {
 
   const data = await res.json();
   console.log("VALIDATION RESPONSE:", data);
-
   candidateId = data.candidate_id;
   window.interviewEndsAt = new Date(data.ends_at);
   startGlobalTimer();
 }
 
-
-
-
 /* ================= AI STATE ================= */
 let aiState = "idle";
+
 function setState(state) {
   aiState = state;
   document.body.setAttribute("data-state", state);
   console.log("AI STATE →", state);
+
+  // Update UI status indicators
+  updateStatusUI(state);
+}
+
+function updateStatusUI(state) {
+  const statusLabel = document.getElementById("statusLabel");
+  const statusMain  = document.getElementById("statusMain");
+  const statusSub   = document.getElementById("statusSub");
+
+  const states = {
+    idle:      { label: "Idle",       main: "Idle",      sub: "Waiting to begin" },
+    thinking:  { label: "Thinking…",  main: "Thinking",  sub: "AI is preparing your question" },
+    asking:    { label: "Asking",     main: "Asking",    sub: "Listen carefully to the question" },
+    listening: { label: "Listening…", main: "Listening", sub: "Speak your answer clearly" },
+    completed: { label: "Completed",  main: "Done!",     sub: "Interview completed successfully" }
+  };
+
+  const s = states[state] || states.idle;
+
+  if (statusLabel) statusLabel.textContent = s.label;
+  if (statusMain)  statusMain.textContent  = s.main;
+  if (statusSub)   statusSub.textContent   = s.sub;
 }
 
 /* ================= DOM ================= */
 const questionEl = document.getElementById("question");
-const answerBox = document.getElementById("answerBox");
-const micBtn = document.getElementById("micBtn");
-const submitBtn = document.getElementById("submitBtn");
-const timerEl = document.getElementById("timer");
-const videoEl = document.getElementById("camera");
-console.log("🎥 videoEl =", videoEl);
-/* ================= FULLSCREEN ENFORCEMENT ================= */
+const answerBox  = document.getElementById("answerBox");
+const micBtn     = document.getElementById("micBtn");
+const submitBtn  = document.getElementById("submitBtn");
+const timerEl    = document.getElementById("timer");
+const videoEl    = document.getElementById("camera");
+
+console.log("📹 videoEl =", videoEl);
+
+/* ================= FULLSCREEN ENFORCEMENT (DISABLED) ================= */
 /*
-function requestFullscreen() {
-  const el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen();
-  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-}
+function requestFullscreen() { ... }
+document.addEventListener("fullscreenchange", () => { ... });
+*/
 
-function pauseInterviewForFullscreen() {
-  if (interviewCompleted || interviewPaused) return;
-
-  interviewPaused = true;
-  interviewPausedForFullscreen = true;
-
-  clearInterval(timerInterval);
-  speechSynthesis.cancel();    
-
-  const overlay = document.getElementById("fullscreenOverlay");
-  if (overlay) overlay.style.display = "flex";
-
-  console.warn("⏸ Interview paused (fullscreen violation)");
-}
-
-
-
-document.addEventListener("fullscreenchange", () => {
-  if (interviewCompleted) return;
-
-  if (!document.fullscreenElement) {
-    fullscreenExitCount++;
-
-    if (fullscreenExitCount >= MAX_FULLSCREEN_EXIT) {
-      alert("❌ Interview terminated (fullscreen violation).");
-      finishInterview(true);
-      return;
-    }
-
-    pauseInterviewForFullscreen();
-  }
-});*/
-
-
-
-/* ================= TAB SWITCH DETECTION ================= */
-/*document.addEventListener("visibilitychange", () => {
-  if (interviewCompleted || interviewPausedForFullscreen) return;
-
-  if (document.hidden) {
-    tabSwitchCount++;
-    hardStopTTS("tab-switch");
-    interviewPaused = true;
-    clearInterval(timerInterval);
-    alert(
-      `⚠️ Tab switching detected.\nWarning ${tabSwitchCount}/${MAX_TAB_SWITCH}`
-    );
-
-    if (tabSwitchCount >= MAX_TAB_SWITCH) {
-      alert("❌ Interview terminated (tab switching).");
-      finishInterview(true);
-    }
-  }
-});*/
-
+/* ================= TAB SWITCH DETECTION (DISABLED) ================= */
+/*
+document.addEventListener("visibilitychange", () => { ... });
+*/
 
 /* ================= TIMER ================= */
 const QUESTION_TIME = 60;
@@ -177,7 +144,10 @@ let timeLeft = QUESTION_TIME;
 function startTimer() {
   clearInterval(timerInterval);
   timeLeft = QUESTION_TIME;
-  timerEl.innerText = `⏱ ${timeLeft}s`;
+
+  // Sync all timer UIs
+  syncTimerDisplay(timeLeft);
+  updateTimerBar(timeLeft);
 
   timerInterval = setInterval(() => {
     if (interviewCompleted || interviewPaused) {
@@ -185,9 +155,9 @@ function startTimer() {
       return;
     }
 
-
     timeLeft--;
-    timerEl.innerText = `⏱ ${timeLeft}s`;
+    syncTimerDisplay(timeLeft);
+    updateTimerBar(timeLeft);
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
@@ -200,6 +170,43 @@ function startTimer() {
   }, 1000);
 }
 
+function syncTimerDisplay(t) {
+  // Keep hidden #timer updated for any JS that reads it
+  if (timerEl) timerEl.innerText = `⏱ ${t}s`;
+
+  // Update header timer
+  const headerTime = document.querySelector(".header-time");
+  if (headerTime) headerTime.innerText = `⏱ ${t}s`;
+
+  // Update sidebar big timer
+  const sidebarTimer = document.getElementById("sidebarTimer");
+  if (sidebarTimer) {
+    sidebarTimer.textContent = t;
+
+    // Add critical class when under 10s
+    const timerBlock = sidebarTimer.closest(".status-card") || document.body;
+    if (t <= 10) {
+      document.body.classList.add("timer-critical");
+    } else {
+      document.body.classList.remove("timer-critical");
+    }
+  }
+}
+
+function updateTimerBar(t) {
+  const bar = document.getElementById("timerBar");
+  if (!bar) return;
+  const pct = (t / QUESTION_TIME) * 100;
+  bar.style.width = pct + "%";
+
+  if (t <= 15) {
+    bar.style.background = "linear-gradient(90deg, #ff5c5c, #ff2f2f)";
+  } else if (t <= 30) {
+    bar.style.background = "linear-gradient(90deg, #ffa755, #ff7c55)";
+  } else {
+    bar.style.background = "linear-gradient(90deg, #7c9cff, #a78bfa)";
+  }
+}
 
 let globalTimerInterval;
 
@@ -209,39 +216,42 @@ function startGlobalTimer() {
   globalTimerInterval = setInterval(() => {
     if (!window.interviewEndsAt || interviewCompleted) return;
 
-    const now = new Date();
+    const now  = new Date();
     const diff = window.interviewEndsAt - now;
 
     if (diff <= 0) {
       clearInterval(globalTimerInterval);
-      timerEl.innerText = "⏱ 00:00";
+      if (timerEl) timerEl.innerText = "⏱ 00:00";
+      const headerTime = document.querySelector(".header-time");
+      if (headerTime) headerTime.innerText = "⏱ 00:00";
       return;
     }
 
     const minutes = Math.floor(diff / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
+    const formatted = `⏱ ${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
 
-    timerEl.innerText =
-      `⏳ ${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    // Only update header with global timer when between questions
+    // The per-question timer takes priority during active questions
+    if (timerEl) timerEl.innerText = formatted;
   }, 1000);
 }
+
 /* ================= TTS ================= */
 function speak(text, onDone) {
-  if (interviewPaused || interviewCompleted) return;  // 🔒 BLOCK
-
+  if (interviewPaused || interviewCompleted) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 0.95;
-  u.pitch = 1;
-  u.volume = 1;
 
-  u.onend = () => {
+  const u    = new SpeechSynthesisUtterance(text);
+  u.rate     = 0.95;
+  u.pitch    = 1;
+  u.volume   = 1;
+  u.onend    = () => {
     if (!interviewPaused && onDone) onDone();
   };
 
   speechSynthesis.speak(u);
 }
-
 
 /* ================= STT ================= */
 const SpeechRecognition =
@@ -251,8 +261,8 @@ if (!SpeechRecognition) {
   alert("Speech recognition not supported.");
 }
 
-const recognition = new SpeechRecognition();
-recognition.lang = "en-US";
+const recognition          = new SpeechRecognition();
+recognition.lang           = "en-US";
 recognition.interimResults = false;
 
 micBtn.onclick = () => {
@@ -270,41 +280,18 @@ recognition.onend = () => {
   answerBox.focus();
 };
 
-/* ================= CAMERA (MANDATORY) ================= */
-/*async function initCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" },
-      audio: false
-    });
-
-    videoEl.srcObject = stream;
-
-    setInterval(() => {
-      if (!videoEl.srcObject || videoEl.readyState !== 4) {
-        cameraFailureCount++;
-
-        if (cameraFailureCount >= MAX_CAMERA_FAIL) {
-          alert("❌ Camera disconnected. Interview terminated.");
-          finishInterview(true);
-        }
-      } else {
-        cameraFailureCount = 0;
-      }
-    }, 3000);
-
-  } catch (e) {
-    alert("❌ Camera access is mandatory.");
-    finishInterview(true);
-  }
-}
+/* ================= CAMERA (DISABLED) ================= */
+/*
+async function initCamera() { ... }
 */
+
 /* ================= FETCH QUESTION ================= */
 async function fetchQuestion(answer = null) {
   if (interviewCompleted || interviewPaused) return;
 
   try {
     setState("thinking");
+    showLoadingState();
 
     const res = await fetch(`${API_BASE}/ai-interview/next`, {
       method: "POST",
@@ -313,11 +300,13 @@ async function fetchQuestion(answer = null) {
     });
 
     const data = await res.json();
+
     if (!data.question && !data.completed) {
       console.error("Invalid question response:", data);
       alert("Interview session error. Please refresh.");
       return;
     }
+
     if (data.completed) {
       clearInterval(timerInterval);
       speechSynthesis.cancel();
@@ -332,25 +321,73 @@ async function fetchQuestion(answer = null) {
       return;
     }
 
-    submitBtn.disabled = false;
-    submitBtn.innerText = "Submit";
+    submitBtn.disabled   = false;
+    submitBtn.innerHTML  = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Submit Answer</span>
+    `;
+
     showQuestion(data.question, true);
 
   } catch (e) {
-    submitBtn.disabled = false;
-    submitBtn.innerText = "Submit";
+    submitBtn.disabled   = false;
+    submitBtn.innerHTML  = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Submit Answer</span>
+    `;
     alert("Interview error. Refresh if needed.");
   }
+}
+
+/* ================= LOADING STATE UI ================= */
+function showLoadingState() {
+  const loadingEl = document.getElementById("questionLoading");
+  const textEl    = document.getElementById("questionText");
+  if (loadingEl) loadingEl.style.display = "flex";
+  if (textEl)    textEl.style.display    = "none";
 }
 
 /* ================= DISPLAY QUESTION ================= */
 function showQuestion(q, isFirst = false) {
   if (interviewCompleted) return;
 
-  questionEl.innerText = q;
-  answerBox.value = "";
-  submitBtn.disabled = false;
-  submitBtn.innerText = "Submit";
+  questionCount++;
+
+  // Update question number badge
+  const badge = document.getElementById("questionBadge");
+  if (badge) badge.textContent = `Q ${questionCount}`;
+
+  // Update progress (assuming max ~8 questions as estimate)
+  updateProgress(questionCount);
+
+  // Hide loading, show text
+  const loadingEl = document.getElementById("questionLoading");
+  const textEl    = document.getElementById("questionText");
+
+  if (loadingEl) loadingEl.style.display = "none";
+  if (textEl) {
+    textEl.style.display  = "block";
+    textEl.style.opacity  = "0";
+    textEl.style.transform = "translateY(10px)";
+    textEl.textContent    = q;
+
+    // Animate in
+    requestAnimationFrame(() => {
+      textEl.style.transition  = "opacity 0.4s ease, transform 0.4s ease";
+      textEl.style.opacity     = "1";
+      textEl.style.transform   = "translateY(0)";
+    });
+  }
+
+  // Keep the original #question element text for JS compatibility
+  questionEl.setAttribute("data-question", q);
+
+  answerBox.value      = "";
+  submitBtn.disabled   = false;
 
   setState("asking");
 
@@ -365,7 +402,18 @@ function showQuestion(q, isFirst = false) {
       if (!interviewCompleted && !interviewPaused) startTimer();
     });
   }
-  
+}
+
+function updateProgress(qNum) {
+  const estimated  = 8;
+  const pct        = Math.min(Math.round(((qNum - 1) / estimated) * 100), 95);
+  const fill       = document.getElementById("progressFill");
+  const glow       = document.getElementById("progressGlow");
+  const pctEl      = document.getElementById("progressPct");
+
+  if (fill)  fill.style.width  = pct + "%";
+  if (glow)  glow.style.width  = pct + "%";
+  if (pctEl) pctEl.textContent = pct + "%";
 }
 
 /* ================= SUBMIT ================= */
@@ -380,10 +428,24 @@ function submitAnswer() {
     return;
   }
 
-  submitBtn.disabled = true;
-  submitBtn.innerText = "Submitting…";
+  submitBtn.disabled  = true;
+  submitBtn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="animation: spin 1s linear infinite">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+    </svg>
+    <span>Submitting…</span>
+  `;
+
   clearInterval(timerInterval);
   speechSynthesis.cancel();
+
+  // Reset timer bar
+  const bar = document.getElementById("timerBar");
+  if (bar) {
+    bar.style.transition = "width 0.3s ease";
+    bar.style.width      = "0%";
+  }
+  document.body.classList.remove("timer-critical");
 
   fetchQuestion(answer);
 }
@@ -391,264 +453,97 @@ function submitAnswer() {
 /* ================= FINISH ================= */
 function finishInterview(force = false) {
   if (interviewCompleted) return;
-
   interviewCompleted = true;
 
-
-  try {
-    mlCamera?.stop();
-  } catch {}
+  try { mlCamera?.stop(); } catch {}
 
   setState("completed");
   clearInterval(timerInterval);
   speechSynthesis.cancel();
 
+  // Stop camera if exists
   const video = document.getElementById("camera");
   if (video && video.srcObject) {
     video.srcObject.getTracks().forEach(track => track.stop());
     video.srcObject = null;
   }
 
-  questionEl.innerHTML = force
-    ? "❌ Interview Terminated"
-    : "🎉 Interview Completed";
+  // Update progress to 100%
+  const fill  = document.getElementById("progressFill");
+  const glow  = document.getElementById("progressGlow");
+  const pctEl = document.getElementById("progressPct");
+  if (fill)  fill.style.width  = "100%";
+  if (glow)  glow.style.width  = "100%";
+  if (pctEl) pctEl.textContent = "100%";
 
-  answerBox.style.display = "none";
-  micBtn.style.display = "none";
-  submitBtn.style.display = "none";
-  timerEl.innerText = "";
+  // Update badge
+  const badge = document.getElementById("questionBadge");
+  if (badge) badge.textContent = force ? "Ended" : "Done ✓";
+
+  // Show completion UI in question box
+  const loadingEl = document.getElementById("questionLoading");
+  const textEl    = document.getElementById("questionText");
+
+  if (loadingEl) loadingEl.style.display = "none";
+  if (textEl) {
+    textEl.style.display = "none";
+  }
+
+  // Build completion screen
+  const completionHTML = force
+    ? `<div class="completion-screen">
+         <div class="completion-icon" style="border-color:rgba(255,92,92,0.4);background:rgba(255,92,92,0.1);">❌</div>
+         <div class="completion-title" style="color:var(--danger)">Interview Terminated</div>
+         <div class="completion-sub">Your session has been ended. Please contact support if needed.</div>
+       </div>`
+    : `<div class="completion-screen">
+         <div class="completion-icon">✅</div>
+         <div class="completion-title">Interview Complete!</div>
+         <div class="completion-sub">Excellent work! Your responses have been submitted for evaluation. You'll hear back soon.</div>
+       </div>`;
+
+  questionEl.innerHTML = completionHTML;
+
+  // Hide answer section and controls
+  const answerSection = document.querySelector(".answer-section");
+  const controls      = document.querySelector(".controls");
+  if (answerSection) answerSection.style.display = "none";
+  if (controls) controls.style.display = "none";
+
+  // Update timers
+  const sidebarTimer = document.getElementById("sidebarTimer");
+  if (sidebarTimer) sidebarTimer.textContent = "--";
+
+  const headerTime = document.querySelector(".header-time");
+  if (headerTime) headerTime.innerText = "⏱ Done";
+
+  if (timerEl) timerEl.innerText = "";
+
+  // Update timer bar to 0
+  const bar = document.getElementById("timerBar");
+  if (bar) bar.style.width = "0%";
+
+  document.body.classList.remove("timer-critical");
 
   if (!force) {
-    speak("Thank you. Your interview is complete.");
+    speak("Thank you. Your interview is complete. You did a great job!");
   }
 }
 
+/* ================= CSS SPIN KEYFRAME (injected) ================= */
+const spinStyle = document.createElement("style");
+spinStyle.textContent = `
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(spinStyle);
 
-
-/* ================= ML ANTI-CHEAT (STABLE VERSION) ================= */
+/* ================= ML ANTI-CHEAT (DISABLED) ================= */
 /*
-const canvas = document.getElementById("overlay");
-const ctx = canvas.getContext("2d");
-
-let warnings = 0;
-const MAX_WARNINGS = 3;
-
-// frame counters
-let noFaceFrames = 0;
-let multiFaceFrames = 0;
-let lookAwayFrames = 0;
-
-// cooldown timers
-let lastWarningTime = 0;
-const WARNING_COOLDOWN = 5000; // 5 sec
-
-// thresholds (relaxed + human-safe)
-const NO_FACE_THRESHOLD = 10;        // 3 sec
-const MULTI_FACE_THRESHOLD = 8;    
-const LOOK_AWAY_THRESHOLD = 15;     // 6 sec
-
-function now() {
-  return Date.now();
-}
-
-function canWarn() {
-  return now() - lastWarningTime > WARNING_COOLDOWN;
-}
-
-function issueWarning(reason) {
-  if (!canWarn()) return;
-
-  warnings++;
-  lastWarningTime = now();
-
-  interviewPaused = true;
-  interviewPausedForFullscreen = true;
-
-  hardStopTTS("warning");
-  clearInterval(timerInterval);
-
-  pauseInterviewForFullscreen();
-  const overlay = document.getElementById("fullscreenOverlay");
-  if (overlay) overlay.style.display = "flex";
-
-  setTimeout(() => {
-    alert(`⚠️ Warning ${warnings}/${MAX_WARNINGS}\n${reason}`);
-  }, 0);
-
-  if (warnings >= MAX_WARNINGS) {
-    terminateInterview("Interview terminated due to repeated violations.");
-  }
-}
-
-
-
-
-
-function terminateInterview(reason) {
-  setTimeout(() => {
-    alert(`❌ ${reason}`);
-    finishInterview(true);
-  }, 100);
-}*/
-
-
-/* ---------- FACE MESH (RELAXED EYE TRACKING) ---------- */
-/*const faceMesh = new FaceMesh({
-  locateFile: (file) => 
-    `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-});
-
-faceMesh.setOptions({
-  maxNumFaces: 2,
-  refineLandmarks: true,
-  minDetectionConfidence: 0.6,
-  minTrackingConfidence: 0.6,
-});
-// --- Gaze calibration ---
-let calibrated = false;
-let baseDx = 0;
-let baseDy = 0;
-let calibrationFrames = 0;
-const CALIBRATION_REQUIRED = 30;
-
-// smoothing
-let dxHistory = [];
-let dyHistory = [];
-const SMOOTHING_WINDOW = 10;
-
-faceMesh.onResults((res) => {
-  const faces = res.multiFaceLandmarks;*/
-
-  /* =======================
-     NO FACE DETECTION
-  ======================= */
-  /*if (!faces || faces.length === 0) {
-    noFaceFrames++;
-    multiFaceFrames = 0;
-    lookAwayFrames = 0;
-
-    if (noFaceFrames === 15) {
-      issueWarning("Face not detected");
-    }
-    return;
-  } else {
-    noFaceFrames = 0;
-  }*/
-
-  /* =======================
-     MULTIPLE FACE DETECTION
-  ======================= */
-  /*if (faces.length > 1) {
-    multiFaceFrames++;
-    lookAwayFrames = 0;
-
-    if (multiFaceFrames === 8) {
-      issueWarning("Multiple faces detected");
-    }
-    return;
-  } else {
-    multiFaceFrames = 0;
-  }
-
-const lm = faces[0];
-
-// stable landmarks
-const nose = lm[1];
-const leftEye = lm[33];
-const rightEye = lm[263];
-
-// eye center
-const eyeCenterX = (leftEye.x + rightEye.x) / 2;
-const eyeCenterY = (leftEye.y + rightEye.y) / 2;
-
-// raw deltas
-const dx = Math.abs(nose.x - eyeCenterX);
-const dy = Math.abs(nose.y - eyeCenterY);
-if (!calibrated) {
-  baseDx += dx;
-  baseDy += dy;
-  calibrationFrames++;
-
-  if (calibrationFrames >= CALIBRATION_REQUIRED) {
-    baseDx /= calibrationFrames;
-    baseDy /= calibrationFrames;
-    calibrated = true;
-    console.log("✅ Gaze calibrated", baseDx, baseDy);
-  }
-  return;
-}
-
-// --- SMOOTHING ---
-dxHistory.push(dx);
-dyHistory.push(dy);
-if (dxHistory.length > SMOOTHING_WINDOW) dxHistory.shift();
-if (dyHistory.length > SMOOTHING_WINDOW) dyHistory.shift();
-
-const avgDx = dxHistory.reduce((a, b) => a + b, 0) / dxHistory.length;
-const avgDy = dyHistory.reduce((a, b) => a + b, 0) / dyHistory.length;
-
-// --- DELTA FROM USER BASELINE ---
-const deltaX = Math.abs(avgDx - baseDx);
-const deltaY = Math.abs(avgDy - baseDy);
-
-// relaxed human-safe limits
-const MAX_DELTA_X = 0.18;
-const MAX_DELTA_Y = 0.20;
-
-// sustained violation only
-if (deltaX > MAX_DELTA_X || deltaY > MAX_DELTA_Y) {
-  lookAwayFrames++;
-} else {
-  lookAwayFrames = Math.max(0, lookAwayFrames - 4);
-}
-
-if (lookAwayFrames >= 45) {
-  issueWarning("Please look at the screen");
-}
-});  */
-
-
-/* ---------- CAMERA PIPELINE ---------- */
-/*const mlCamera = new Camera(videoEl, {
-  onFrame: async () => {
-    await faceMesh.send({ image: videoEl });
-  },
-  width: 640,
-  height: 480,
-});
-
+...all anti-cheat code commented out as in original...
 */
-
-
-
-/*
-document.getElementById("resumeFullscreenBtn").onclick = async () => {
-  await document.documentElement.requestFullscreen();
-
-  const overlay = document.getElementById("fullscreenOverlay");
-  if (overlay) overlay.style.display = "none";
-
-  interviewPaused = false;                 // ✅ RESUME
-  interviewPausedForFullscreen = false;
-
-  console.log("▶️ Interview resumed");
-
-  if (interviewCompleted) return;
-
-  if (!questionEl.innerText || questionEl.innerText.includes("Loading")) {
-    if (lastQuestionText) {
-      questionEl.innerText = lastQuestionText;
-    } else {
-      fetchQuestion(); 
-      return;
-    }
-  }
-
-  startTimer();
-
-};*/
-
-
 
 /* ================= START INTERVIEW ================= */
 window.addEventListener("DOMContentLoaded", () => {
@@ -662,29 +557,29 @@ window.addEventListener("DOMContentLoaded", () => {
   console.log("✅ Start Interview button ready");
 
   startBtn.addEventListener("click", async () => {
-
-    if (interviewStarted) return;  // prevent multiple clicks
-
+    if (interviewStarted) return;
     interviewStarted = true;
 
-    startBtn.innerText = "Starting...";
+    startBtn.innerHTML = `
+      <span class="start-btn-icon">⟳</span>
+      <span>Starting…</span>
+      <div class="start-btn-glow"></div>
+    `;
     startBtn.disabled = true;
 
     try {
       await validateInterviewToken();
-
       document.getElementById("startScreen")?.remove();
-
       fetchQuestion();
-
     } catch (e) {
       console.error(e);
-
-      interviewStarted = false;      // allow retry
-      startBtn.innerText = "Start Interview";
+      interviewStarted  = false;
+      startBtn.innerHTML = `
+        <span class="start-btn-icon">▶</span>
+        <span>Start Interview</span>
+        <div class="start-btn-glow"></div>
+      `;
       startBtn.disabled = false;
     }
   });
 });
-
-
