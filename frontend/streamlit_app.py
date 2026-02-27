@@ -208,7 +208,7 @@ if page == "📥 HR Intake":
         with col1:
             crit_name = st.text_input("Criterion Name", key="resume_crit_name")
         with col2:
-            crit_weight = st.number_input("Weight %", key="resume_crit_weight")
+            crit_weight = st.number_input("Weight %",min_value=0, max_value=100, key="resume_crit_weight")
         with col3:
             if st.form_submit_button("Add"):
                 if crit_name:
@@ -832,6 +832,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
