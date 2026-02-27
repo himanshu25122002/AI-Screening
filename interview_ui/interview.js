@@ -36,7 +36,8 @@ const MAX_TAB_SWITCH = 3;
 const MAX_CAMERA_FAIL = 3;
 
 let interviewStarted = false;
-
+let interviewStartTime = null;
+let interviewDurationMs = null;
 // Question counter for UI
 let questionCount = 0;
 
@@ -80,6 +81,8 @@ async function validateInterviewToken() {
   console.log("VALIDATION RESPONSE:", data);
   candidateId = data.candidate_id;
   window.interviewEndsAt = new Date(data.ends_at);
+  interviewStartTime = new Date();
+  interviewDurationMs = window.interviewEndsAt - interviewStartTime;
   startGlobalTimer();
 }
 
@@ -208,6 +211,16 @@ function updateTimerBar(t) {
   }
 }
 
+function updateTimeProgress(pct) {
+  const fill  = document.getElementById("progressFill");
+  const glow  = document.getElementById("progressGlow");
+  const pctEl = document.getElementById("progressPct");
+
+  if (fill)  fill.style.width  = pct + "%";
+  if (glow)  glow.style.width  = pct + "%";
+  if (pctEl) pctEl.textContent = pct + "%";
+}
+
 let globalTimerInterval;
 
 function startGlobalTimer() {
@@ -216,27 +229,31 @@ function startGlobalTimer() {
   globalTimerInterval = setInterval(() => {
     if (!window.interviewEndsAt || interviewCompleted) return;
 
-    const now  = new Date();
-    const diff = window.interviewEndsAt - now;
+    const now = new Date();
+    const remaining = window.interviewEndsAt - now;
 
-    if (diff <= 0) {
+    if (remaining <= 0) {
       clearInterval(globalTimerInterval);
-      if (timerEl) timerEl.innerText = "⏱ 00:00";
-      const headerTime = document.querySelector(".header-time");
-      if (headerTime) headerTime.innerText = "⏱ 00:00";
+      updateTimeProgress(100);
       return;
     }
 
-    const minutes = Math.floor(diff / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
+    const elapsed = interviewDurationMs - remaining;
+    const pct = Math.min(Math.round((elapsed / interviewDurationMs) * 100), 99);
+
+    updateTimeProgress(pct);
+
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
     const formatted = `⏱ ${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
 
-    // Only update header with global timer when between questions
-    // The per-question timer takes priority during active questions
     const headerTime = document.querySelector(".header-time");
     if (headerTime) headerTime.innerText = formatted;
+
   }, 1000);
 }
+
+
 
 /* ================= TTS ================= */
 function speak(text, onDone) {
@@ -362,8 +379,7 @@ function showQuestion(q, isFirst = false) {
   const badge = document.getElementById("questionBadge");
   if (badge) badge.textContent = `Q ${questionCount}`;
 
-  // Update progress (assuming max ~8 questions as estimate)
-  updateProgress(questionCount);
+ 
 
   // Hide loading, show text
   const loadingEl = document.getElementById("questionLoading");
@@ -405,17 +421,6 @@ function showQuestion(q, isFirst = false) {
   }
 }
 
-function updateProgress(qNum) {
-  const estimated  = 8;
-  const pct        = Math.min(Math.round(((qNum - 1) / estimated) * 100), 95);
-  const fill       = document.getElementById("progressFill");
-  const glow       = document.getElementById("progressGlow");
-  const pctEl      = document.getElementById("progressPct");
-
-  if (fill)  fill.style.width  = pct + "%";
-  if (glow)  glow.style.width  = pct + "%";
-  if (pctEl) pctEl.textContent = pct + "%";
-}
 
 /* ================= SUBMIT ================= */
 submitBtn.onclick = submitAnswer;
