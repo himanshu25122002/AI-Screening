@@ -1,336 +1,262 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Futuready AI Interview</title>
-
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="icon" href="data:,">
-
-  <!-- 🔒 FULLSCREEN + ANTI ZOOM LOCK -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-
-  <style>
-    :root {
-      --bg: #0b0f1a;
-      --card: rgba(255,255,255,0.08);
-      --glass: rgba(255,255,255,0.12);
-      --accent: #7c9cff;
-      --success: #00e5a8;
-      --danger: #ff5c5c;
-      --text: #e6e8f0;
-      --muted: #9aa4c7;
-    }
-
-    * {
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 20% 20%, #1a1f3a, transparent 60%),
-        radial-gradient(circle at 80% 0%, #0f2a44, transparent 50%),
-        var(--bg);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* ===== LAYOUT ===== */
-    .container {
-      width: 96%;
-      max-width: 1200px;
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 24px;
-    }
-
-    /* ===== INTERVIEW PANEL ===== */
-    .panel {
-      background: var(--card);
-      backdrop-filter: blur(20px);
-      border-radius: 18px;
-      padding: 28px;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.4);
-      position: relative;
-      overflow: hidden;
-    }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 22px;
-    }
-
-    /* ===== QUESTION ===== */
-    .question-box {
-      background: var(--glass);
-      border-radius: 14px;
-      padding: 22px;
-      font-size: 20px;
-      min-height: 110px;
-      display: flex;
-      align-items: center;
-    }
-
-    /* ===== ANSWER ===== */
-    textarea {
-      width: 100%;
-      margin-top: 16px;
-      background: #0f1324;
-      color: var(--text);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 15px;
-      resize: none;
-      outline: none;
-      min-height: 90px;
-    }
-
-    /* ===== CONTROLS ===== */
-    .controls {
-      display: flex;
-      gap: 14px;
-      margin-top: 16px;
-      align-items: center;
-    }
-
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 14px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .mic {
-      background: linear-gradient(135deg, #7c9cff, #5b7cff);
-      color: #fff;
-    }
-
-    .submit {
-      background: linear-gradient(135deg, #00e5a8, #00c896);
-      color: #00261b;
-    }
-
-    .timer {
-      margin-left: auto;
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--accent);
-    }
-
-    /* ===== CAMERA ===== */
-    .camera-panel {
-      background: var(--card);
-      backdrop-filter: blur(20px);
-      border-radius: 18px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.4);
-    }
-
-    video {
-      width: 100%;
-      border-radius: 14px;
-      background: #000;
-      border: 2px solid #4CAF50;
-    }
-
-    .camera-label {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    /* ===== ANTI-CHEAT OVERLAY ===== */
-  /*
-    #antiCheatWarning {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.88);
-      z-index: 10000;
-      color: white;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      text-align: center;
-    }
-
-    #antiCheatWarning h1 {
-      color: var(--danger);
-    }
-
-    @media (max-width: 900px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
-    }
-  */  
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body data-state="idle">
-  <div id="startScreen" style="
-    position:fixed;
-    inset:0;
-    background:#0b0f1a;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:9999;
-  ">
-    <button id="startInterviewBtn" style="
-      padding:18px 36px;
-      font-size:18px;
-      font-weight:700;
-      border:none;
-      border-radius:12px;
-      background:#7c9cff;
-      color:white;
-      cursor:pointer;
-    ">
-      ▶ Start Interview
-    </button>
+
+  <!-- ANIMATED BACKGROUND -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
   </div>
 
+  <!-- GRID OVERLAY -->
+  <div class="bg-grid"></div>
 
-  <!-- 🚨 ANTI-CHEAT WARNING -->
-  <!--
-  <div id="antiCheatWarning">
-    <h1>⚠️ Anti-Cheat Warning</h1>
-    <p id="antiCheatMessage">
-      Fullscreen or camera violation detected.
-    </p>
-    <p style="opacity:0.7">
-      Returning to fullscreen is mandatory.
-    </p>
-  </div>
-
-  <div class="container">
--->
-    <!-- LEFT: INTERVIEW -->
-    <div class="panel">
-      <h1>AI Interview</h1>
-      <div class="subtitle">
-        Answer naturally. You have 60 seconds per question.
+  <!-- START SCREEN -->
+  <div id="startScreen" class="start-screen">
+    <div class="start-card">
+      <div class="start-logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#7c9cff" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#7c9cff" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">Futuready<span class="logo-ai">AI</span></span>
       </div>
 
-      <div class="question-box" id="question">
-        Loading question…
+      <div class="start-badge">Interview Session</div>
+
+      <h1 class="start-title">Ready to Begin<br/><span class="gradient-text">Your AI Interview?</span></h1>
+      <p class="start-subtitle">Our AI will ask you questions and evaluate your responses in real-time. You have <strong>60 seconds</strong> per question.</p>
+
+      <div class="start-info-grid">
+        <div class="start-info-item">
+          <div class="info-icon">🎙</div>
+          <div class="info-label">Voice Enabled</div>
+        </div>
+        <div class="start-info-item">
+          <div class="info-icon">⏱</div>
+          <div class="info-label">60s Per Question</div>
+        </div>
+        <div class="start-info-item">
+          <div class="info-icon">🤖</div>
+          <div class="info-label">AI Evaluated</div>
+        </div>
       </div>
 
-      <textarea
-        id="answerBox"
-        placeholder="Your answer will appear here or type manually…">
-      </textarea>
-
-      <div class="controls">
-        <button class="mic" id="micBtn">🎙 Speak</button>
-        <button class="submit" id="submitBtn">Submit</button>
-        <div class="timer" id="timer">⏱ 60s</div>
-      </div>
-    </div>
-
-    <!-- RIGHT: CAMERA -->
-    <!--
-    <div class="camera-panel">
-      <div style="position: relative; width: 100%;">
-        <video
-          id="camera"
-          autoplay
-          muted
-          playsinline
-          style="width:100%; border-radius:14px;"
-        ></video>
-    
-        <canvas
-          id="overlay"
-          style="
-            position:absolute;
-            top:0;
-            left:0;
-            width:100%;
-            height:100%;
-            pointer-events:none;
-          "
-        ></canvas>
-      </div>
-
-      <div class="camera-label">
-        Camera is mandatory. Anti-cheat monitoring enabled.
-      </div>
-    </div>
--->
-
-  </div>
-
-  <!-- FULLSCREEN REQUIRED OVERLAY -->
-  <!--
-  <div id="fullscreenOverlay" style="
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  ">
-    <div style="
-      background: #111;
-      padding: 32px;
-      border-radius: 16px;
-      text-align: center;
-      max-width: 420px;
-      color: white;
-    ">
-      <h2 style="margin-bottom: 12px;">⚠️ Fullscreen Required</h2>
-      <p style="color:#ccc; margin-bottom:20px;">
-        You exited fullscreen. The interview is paused.<br/>
-        Click below to continue.
-      </p>
-
-      <button id="resumeFullscreenBtn"
-        style="
-          padding:14px 26px;
-          font-size:16px;
-          font-weight:600;
-          background:#00e5a8;
-          color:#00261b;
-          border:none;
-          border-radius:10px;
-          cursor:pointer;
-        ">
-        Resume Interview
+      <button id="startInterviewBtn" class="start-btn">
+        <span class="start-btn-icon">▶</span>
+        <span>Start Interview</span>
+        <div class="start-btn-glow"></div>
       </button>
+
+      <p class="start-disclaimer">Ensure you're in a quiet environment with microphone access enabled.</p>
     </div>
   </div>
-  
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
--->
-<script src="./interview.js"></script>
 
+  <!-- MAIN INTERVIEW UI -->
+  <div class="interview-wrapper">
 
+    <!-- HEADER -->
+    <header class="interview-header">
+      <div class="header-left">
+        <div class="header-logo">
+          <div class="logo-icon small">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#7c9cff" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#7c9cff" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="logo-text small">Futuready<span class="logo-ai">AI</span></span>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="session-badge">
+          <span class="session-dot"></span>
+          <span>Live Interview Session</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-time" id="timer">⏱ 60s</div>
+      </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <div class="container">
+
+      <!-- LEFT: QUESTION PANEL -->
+      <div class="panel question-panel">
+        <!-- Gradient border effect -->
+        <div class="panel-gradient-border"></div>
+
+        <!-- Panel Header -->
+        <div class="panel-header">
+          <div class="panel-header-left">
+            <div class="ai-avatar">
+              <div class="ai-avatar-ring"></div>
+              <div class="ai-avatar-inner">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="4" stroke="#7c9cff" stroke-width="1.5"/>
+                  <circle cx="9" cy="10" r="1.5" fill="#7c9cff"/>
+                  <circle cx="15" cy="10" r="1.5" fill="#7c9cff"/>
+                  <path d="M8 15c1 1.5 7 1.5 8 0" stroke="#7c9cff" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <div>
+              <div class="panel-title">AI Interviewer</div>
+              <div class="panel-subtitle" id="statusLabel">Initializing…</div>
+            </div>
+          </div>
+          <div class="panel-header-right">
+            <div class="question-number-badge" id="questionBadge">Q —</div>
+          </div>
+        </div>
+
+        <!-- Question Timer Bar -->
+        <div class="question-timer-bar">
+          <div class="question-timer-fill" id="timerBar"></div>
+        </div>
+
+        <!-- Question Box -->
+        <div class="question-box-wrapper">
+          <div class="question-box" id="question">
+            <div class="question-loading" id="questionLoading">
+              <div class="thinking-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <p>AI is preparing your question…</p>
+            </div>
+            <div class="question-text" id="questionText" style="display:none;"></div>
+          </div>
+        </div>
+
+        <!-- Answer Section -->
+        <div class="answer-section">
+          <div class="answer-label">
+            <span class="answer-label-icon">✍</span>
+            <span>Your Answer</span>
+          </div>
+          <textarea
+            id="answerBox"
+            placeholder="Speak your answer or type here…"
+            spellcheck="false"
+          ></textarea>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+          <button class="mic btn-mic" id="micBtn">
+            <span class="mic-icon-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/>
+                <path d="M5 10a7 7 0 0014 0M12 21v-4M8 21h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>Speak</span>
+            <div class="mic-ripple"></div>
+          </button>
+
+          <button class="submit btn-submit" id="submitBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Submit Answer</span>
+          </button>
+
+          <!-- Hidden timer element for JS compatibility -->
+          <div class="timer" id="timer" style="display:none;">⏱ 60s</div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: SIDEBAR -->
+      <div class="sidebar">
+
+        <!-- Status Card -->
+        <div class="panel sidebar-card status-card">
+          <div class="panel-gradient-border"></div>
+          <div class="sidebar-card-title">Session Status</div>
+
+          <div class="status-indicator-block">
+            <div class="status-orb-wrap">
+              <div class="status-orb" id="statusOrb"></div>
+            </div>
+            <div class="status-text-block">
+              <div class="status-main" id="statusMain">Idle</div>
+              <div class="status-sub" id="statusSub">Waiting to begin</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Progress -->
+          <div class="progress-block">
+            <div class="progress-label-row">
+              <span class="progress-label">Interview Progress</span>
+              <span class="progress-pct" id="progressPct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill"></div>
+              <div class="progress-glow" id="progressGlow"></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Timer Display -->
+          <div class="sidebar-timer-block">
+            <div class="sidebar-timer-label">Time Remaining (Question)</div>
+            <div class="sidebar-timer-display" id="sidebarTimer">60</div>
+            <div class="sidebar-timer-unit">seconds</div>
+          </div>
+
+        </div>
+
+        <!-- Tips Card -->
+        <div class="panel sidebar-card tips-card">
+          <div class="panel-gradient-border"></div>
+          <div class="sidebar-card-title">Quick Tips</div>
+          <ul class="tips-list">
+            <li class="tip-item">
+              <span class="tip-dot"></span>
+              Speak clearly and at a natural pace
+            </li>
+            <li class="tip-item">
+              <span class="tip-dot"></span>
+              Structure answers with examples
+            </li>
+            <li class="tip-item">
+              <span class="tip-dot"></span>
+              Submit before the 60s timer ends
+            </li>
+            <li class="tip-item">
+              <span class="tip-dot"></span>
+              Be specific and concise
+            </li>
+          </ul>
+        </div>
+
+        <!-- Powered by -->
+        <div class="powered-by">
+          <span>Powered by</span>
+          <span class="powered-brand">Futuready AI</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="./interview.js"></script>
 </body>
 </html>
