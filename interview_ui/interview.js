@@ -120,7 +120,7 @@ const questionEl = document.getElementById("question");
 const answerBox  = document.getElementById("answerBox");
 const micBtn     = document.getElementById("micBtn");
 const submitBtn  = document.getElementById("submitBtn");
-const timerEl    = document.getElementById("timer");
+const timerEl = document.getElementById("hiddenTimer");
 const videoEl    = document.getElementById("camera");
 
 console.log("📹 videoEl =", videoEl);
@@ -233,7 +233,8 @@ function startGlobalTimer() {
 
     // Only update header with global timer when between questions
     // The per-question timer takes priority during active questions
-    if (timerEl) timerEl.innerText = formatted;
+    const headerTime = document.querySelector(".header-time");
+    if (headerTime) headerTime.innerText = formatted;
   }, 1000);
 }
 
