@@ -71,6 +71,8 @@ def create_vacancy(vacancy: VacancyCreate):
             "google_calendar_link": vacancy.google_calendar_link,
             "resume_cutoff_score": vacancy.resume_cutoff_score,
             "interview_cutoff_score": vacancy.interview_cutoff_score,
+            "resume_evaluation_criteria": vacancy.resume_evaluation_criteria,
+            "interview_evaluation_criteria": vacancy.interview_evaluation_criteria,
         }).execute()
 
         return {"success": True, "data": result.data[0]}
@@ -596,6 +598,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
