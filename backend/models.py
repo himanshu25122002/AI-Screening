@@ -17,6 +17,8 @@ class VacancyCreate(BaseModel):
     interview_cutoff_score: Optional[int] = None
     resume_evaluation_criteria: Optional[Dict[str, int]] = None
     interview_evaluation_criteria: Optional[Dict[str, int]] = None
+    interview_duration_minutes: Optional[int] = 15
+    interview_custom_prompt: Optional[str] = None
 
 class VacancyResponse(BaseModel):
     id: str
@@ -93,6 +95,7 @@ class EmailRequest(BaseModel):
 
 class GoogleFormSyncRequest(BaseModel):
     sheet_id: Optional[str] = None
+
 
 
 
