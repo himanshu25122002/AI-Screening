@@ -178,10 +178,24 @@ def next_question(payload: InterviewPayload):
 
 
     # 4️⃣ Generate next question (GPT-5-mini SAFE)
+    custom_prompt_block = ""
+
+    if vacancy_data.get("interview_custom_prompt"):
+        custom_prompt_block = f"""
+
+━━━━━━━━━━━━━━━━━━━━━━
+HR CUSTOM INTERVIEW INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━
+{vacancy_data["interview_custom_prompt"]}
+
+If HR provided mandatory questions,
+you MUST ask them at some point during the interview.
+You may adapt wording but must cover the intent.
+    """
     prompt = f"""
 
 You are a senior human interviewer conducting a REAL hiring interview.
-
+{custom_prompt_block}
 ━━━━━━━━━━━━━━━━━━━━━━
 INTERVIEW CONTEXT
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -249,7 +263,6 @@ INTERVIEW STYLE RULES
 
  QUESTION QUALITY RULES
    - Prefer “How did you…”, “Why did you choose…”, “What would you do if…”
-   - Avoid generic HR questions
 
  INTERVIEW FLOW (HUMAN-LIKE)
    - Early questions → verify resume claims & fundamentals
