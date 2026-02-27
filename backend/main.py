@@ -73,6 +73,8 @@ def create_vacancy(vacancy: VacancyCreate):
             "interview_cutoff_score": vacancy.interview_cutoff_score,
             "resume_evaluation_criteria": vacancy.resume_evaluation_criteria,
             "interview_evaluation_criteria": vacancy.interview_evaluation_criteria,
+            "interview_duration_minutes": vacancy.interview_duration_minutes,
+            "interview_custom_prompt": vacancy.interview_custom_prompt,
         }).execute()
 
         return {"success": True, "data": result.data[0]}
@@ -598,6 +600,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
