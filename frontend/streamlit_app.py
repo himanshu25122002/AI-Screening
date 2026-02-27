@@ -202,6 +202,20 @@ if page == "📥 HR Intake":
             placeholder="Collaborative, Innovative..."
         )
 
+        if "resume_criteria" not in st.session_state:
+            st.session_state.resume_criteria = []
+        col1, col2, col3 = st.columns([4,2,1])
+        with col1:
+            crit_name = st.text_input("Criterion Name", key="resume_crit_name")
+        with col2:
+            crit_weight = st.number_input("Weight %", min_value=1, max_value=100, key="resume_crit_weight")
+        with col3:
+            if st.form_submit_button("Add"):
+                if crit_name:
+                    st.session_state.resume_criteria.append((crit_name, crit_weight))
+        resume_dict = {k: v for k, v in st.session_state.resume_criteria}
+        st.write("Current Resume Criteria:", resume_dict)
+        
         submitted = st.form_submit_button("🚀 Create Job")
 
     if submitted:
@@ -232,7 +246,8 @@ if page == "📥 HR Intake":
                     "budget_max": budget_max,
                     "google_calendar_link": google_calendar_link,
                     "resume_cutoff_score": resume_cutoff_score if resume_cutoff_score > 0 else None,
-                    "interview_cutoff_score": interview_cutoff_score if interview_cutoff_score > 0 else None
+                    "interview_cutoff_score": interview_cutoff_score if interview_cutoff_score > 0 else None,
+                    "resume_evaluation_criteria": resume_dict if resume_dict else None
                 }
             )
 
@@ -817,4 +832,5 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
