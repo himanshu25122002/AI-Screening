@@ -244,7 +244,10 @@ function startGlobalTimer() {
     }
 
     const headerTime = document.querySelector(".header-time");
-    if (headerTime) headerTime.innerText = formatted;
+    if (headerTime) {
+      headerTime.innerText = 
+        `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+    }
 
   }, 1000);
 }
