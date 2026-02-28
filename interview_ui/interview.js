@@ -215,7 +215,9 @@ function startGlobalTimer() {
 
   globalTimerInterval = setInterval(() => {
 
-    if (!window.interviewEndsAt || interviewCompleted) return;
+    if (!window.interviewEndsAt || interviewCompleted) {
+      return;
+    }
 
     const now = new Date().getTime();
     const end = window.interviewEndsAt.getTime();
@@ -229,8 +231,8 @@ function startGlobalTimer() {
     }
 
     const total = end - interviewStartTime.getTime();
+    if (total <= 0) return;
     const elapsed = total - remaining;
-
     const pct = Math.min(Math.floor((elapsed / total) * 100), 100);
     updateTimeProgress(pct);
 
@@ -344,12 +346,15 @@ async function fetchQuestion(answer = null) {
       </svg>
       <span>Submit Answer</span>
     `;
-    if (!window.interviewEndsAt && data.ends_at) {
+    if (data.ends_at) {
       window.interviewEndsAt = new Date(data.ends_at);
+
+    if (!interviewStartTime) {
       interviewStartTime = new Date();
-      interviewDurationMs = window.interviewEndsAt - interviewStartTime;
-      startGlobalTimer();
     }
+
+    startGlobalTimer();
+  }
     showQuestion(data.question, true);
 
   } catch (e) {
