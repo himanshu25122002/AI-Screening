@@ -82,37 +82,10 @@ def validate_interview(payload: TokenPayload):
             detail="Interview link has expired"
         )
 
-    
-    if not session.get("started_at"):
-
-        now_utc = datetime.now(timezone.utc)
-
-        vacancy_res = (
-            supabase.table("vacancies")
-            .select("interview_duration_minutes")
-            .eq("id", session["vacancy_id"])
-            .single()
-            .execute()
-        )
-
-        duration = vacancy_res.data.get("interview_duration_minutes", 15)
-
-        ends_at = now_utc + timedelta(minutes=duration)
-
-        supabase.table("ai_interview_sessions").update({
-            "started_at": now_utc.isoformat(),
-            "ends_at": ends_at.isoformat()
-        }).eq("id", session["id"]).execute()
-
-        final_ends_at = ends_at.isoformat()
-
-    else:
-        final_ends_at = session.get("ends_at")
 
     return {
         "success": True,
-        "candidate_id": session["candidate_id"],
-        "ends_at": final_ends_at
+        "candidate_id": session["candidate_id"]
     }
 
 
@@ -138,6 +111,29 @@ def next_question(payload: InterviewPayload):
         raise HTTPException(status_code=403, detail="Interview session inactive")
 
     session = session_res.data[0]
+    # START INTERVIEW TIMER WHEN FIRST QUESTION IS GENERATED
+    if not session.get("started_at"):
+
+        now_utc = datetime.now(timezone.utc)
+
+        vacancy_res = (
+            supabase.table("vacancies")
+            .select("interview_duration_minutes")
+            .eq("id", session["vacancy_id"])
+            .single()
+            .execute()
+        )
+
+        duration = vacancy_res.data.get("interview_duration_minutes", 15)
+
+        ends_at = now_utc + timedelta(minutes=duration)
+
+        supabase.table("ai_interview_sessions").update({
+            "started_at": now_utc.isoformat(),
+            "ends_at": ends_at.isoformat()
+        }).eq("id", session["id"]).execute()
+
+        session["ends_at"] = ends_at.isoformat()
 
     now_utc = datetime.now(timezone.utc)
 
@@ -148,7 +144,7 @@ def next_question(payload: InterviewPayload):
             ends_at_str.replace("Z", "+00:00")
         )
 
-        if now_utc >= ends_at and payload.answer is not None:
+        if now_utc >= ends_at:
             return {
                 "completed": True,
                 "message": "Interview duration completed."
