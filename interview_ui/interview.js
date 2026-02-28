@@ -181,19 +181,6 @@ function syncTimerDisplay(t) {
   const headerTime = document.querySelector(".header-time");
   if (headerTime) headerTime.innerText = `⏱ ${t}s`;
 
-  // Update sidebar big timer
-  const sidebarTimer = document.getElementById("sidebarTimer");
-  if (sidebarTimer) {
-    sidebarTimer.textContent = t;
-
-    // Add critical class when under 10s
-    const timerBlock = sidebarTimer.closest(".status-card") || document.body;
-    if (t <= 10) {
-      document.body.classList.add("timer-critical");
-    } else {
-      document.body.classList.remove("timer-critical");
-    }
-  }
 }
 
 function updateTimerBar(t) {
@@ -250,7 +237,11 @@ function startGlobalTimer() {
 
     const minutes = Math.floor(remaining / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-    const formatted = `⏱ ${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+    const sidebarTimer = document.getElementById("sidebarTimer");
+    if (sidebarTimer) {
+      sidebarTimer.textContent = 
+        `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+    }
 
     const headerTime = document.querySelector(".header-time");
     if (headerTime) headerTime.innerText = formatted;
