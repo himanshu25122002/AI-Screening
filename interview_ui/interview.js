@@ -80,10 +80,10 @@ async function validateInterviewToken() {
   const data = await res.json();
   console.log("VALIDATION RESPONSE:", data);
   candidateId = data.candidate_id;
-  window.interviewEndsAt = new Date(data.ends_at);
+  /*window.interviewEndsAt = new Date(data.ends_at);
   interviewStartTime = new Date();
   interviewDurationMs = window.interviewEndsAt - interviewStartTime;
-  startGlobalTimer();
+  startGlobalTimer();*/
 }
 
 /* ================= AI STATE ================= */
@@ -214,44 +214,43 @@ function startGlobalTimer() {
   clearInterval(globalTimerInterval);
 
   globalTimerInterval = setInterval(() => {
+
     if (!window.interviewEndsAt || interviewCompleted) return;
 
-    const now = new Date();
-    const remaining = window.interviewEndsAt - now;
+    const now = new Date().getTime();
+    const end = window.interviewEndsAt.getTime();
+    const remaining = end - now;
 
     if (remaining <= 0) {
       clearInterval(globalTimerInterval);
       updateTimeProgress(100);
-      setTimeout(() => {
-        if (!interviewCompleted) {
-          finishInterview(false);
-        }
-      }, 1000);
+      finishInterview(false);
       return;
     }
 
-    const elapsed = interviewDurationMs - remaining;
-    const pct = Math.min(Math.round((elapsed / interviewDurationMs) * 100), 99);
+    const total = end - interviewStartTime.getTime();
+    const elapsed = total - remaining;
 
+    const pct = Math.min(Math.floor((elapsed / total) * 100), 100);
     updateTimeProgress(pct);
 
     const minutes = Math.floor(remaining / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
+
     const sidebarTimer = document.getElementById("sidebarTimer");
     if (sidebarTimer) {
-      sidebarTimer.textContent = 
+      sidebarTimer.textContent =
         `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
     }
 
     const headerTime = document.querySelector(".header-time");
     if (headerTime) {
-      headerTime.innerText = 
+      headerTime.innerText =
         `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
     }
 
   }, 1000);
 }
-
 
 
 /* ================= TTS ================= */
@@ -345,7 +344,12 @@ async function fetchQuestion(answer = null) {
       </svg>
       <span>Submit Answer</span>
     `;
-
+    if (!window.interviewEndsAt && data.ends_at) {
+      window.interviewEndsAt = new Date(data.ends_at);
+      interviewStartTime = new Date();
+      interviewDurationMs = window.interviewEndsAt - interviewStartTime;
+      startGlobalTimer();
+    }
     showQuestion(data.question, true);
 
   } catch (e) {
