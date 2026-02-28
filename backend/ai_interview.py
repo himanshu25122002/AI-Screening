@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 from zoneinfo import ZoneInfo
 from openai import OpenAI
@@ -86,6 +86,7 @@ def validate_interview(payload: TokenPayload):
     if not session.get("started_at"):
 
         now_utc = datetime.now(timezone.utc)
+
         vacancy_res = (
             supabase.table("vacancies")
             .select("interview_duration_minutes")
@@ -103,10 +104,15 @@ def validate_interview(payload: TokenPayload):
             "ends_at": ends_at.isoformat()
         }).eq("id", session["id"]).execute()
 
+        final_ends_at = ends_at.isoformat()
+
+    else:
+        final_ends_at = session.get("ends_at")
+
     return {
         "success": True,
         "candidate_id": session["candidate_id"],
-        "ends_at": ends_at.isoformat() if not session.get("ends_at") else session["ends_at"]
+        "ends_at": final_ends_at
     }
 
 
