@@ -322,7 +322,8 @@ No markdown.
     return {
         "completed": False,
         "question": question,
-        "current": question_count + 1
+        "current": question_count + 1,
+        "ends_at": session.get("ends_at")
     }
 
 
