@@ -296,10 +296,6 @@ INTERVIEW STYLE RULES
    - Middle questions → real work, problem solving, decisions
    - Later questions → ownership, failure, judgment, impact
 
- INTERVIEW LENGTH
-   - The interview has 5 number of questions.
-   - Continue naturally until stopped externally.
-
 ━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT (STRICT)
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -329,8 +325,7 @@ No markdown.
     return {
         "completed": False,
         "question": question,
-        "current": question_count + 1,
-        "total": MAX_QUESTIONS
+        "current": question_count + 1
     }
 
 
