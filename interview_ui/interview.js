@@ -164,11 +164,8 @@ function startTimer() {
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      if (answerBox.value.trim()) {
-        submitAnswer();
-      } else {
-        fetchQuestion("");
-      }
+      submitAnswer();
+      return;
     }
   }, 1000);
 }
