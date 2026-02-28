@@ -495,14 +495,17 @@ if page == "📊 Hiring Pipeline":
             if v["job_role"] == st.session_state.selected_job:
                 selected_vacancy_id = v["id"]
                 break
-
+        selected_vacancy = next(
+            (v for v in vacancies if v["id"] == selected_vacancy_id),
+            None
+        )
+        default_cutoff = selected_vacancy.get("resume_cutoff_score", 80) if selected_vacancy else 80
         cutoff = st.number_input(
             "Resume Passing Score",
             min_value=0,
             max_value=100,
-            value=90
+            value=default_cutoff
         )
-
         if st.button("🚀 Send Google Form to Qualified Candidates"):
 
             res = requests.post(
@@ -879,6 +882,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
