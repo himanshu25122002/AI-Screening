@@ -85,7 +85,8 @@ def validate_interview(payload: TokenPayload):
 
     return {
         "success": True,
-        "candidate_id": session["candidate_id"]
+        "candidate_id": session["candidate_id"],
+        "ends_at": session.get("ends_at")
     }
 
 
