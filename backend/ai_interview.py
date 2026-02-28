@@ -113,7 +113,7 @@ def next_question(payload: InterviewPayload):
 
     session = session_res.data[0]
     # START INTERVIEW TIMER WHEN FIRST QUESTION IS GENERATED
-    if not session.get("started_at"):
+    if not session.get("ends_at"):
 
         now_utc = datetime.now(timezone.utc)
 
