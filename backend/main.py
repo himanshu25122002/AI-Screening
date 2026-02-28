@@ -105,9 +105,17 @@ def get_vacancy(vacancy_id: str):
 @app.post("/vacancies/{vacancy_id}/send-form-bulk")
 def send_form_bulk(vacancy_id: str, cutoff: int):
     try:
+        # ✅ 1. Update vacancy cutoff score in DB
+        supabase.table("vacancies").update({
+            "resume_cutoff_score": cutoff,
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", vacancy_id).execute()
+
+        # ✅ 2. Fetch only eligible candidates
         candidates = supabase.table("candidates")\
             .select("*")\
             .eq("vacancy_id", vacancy_id)\
+            .eq("status", "screened")\
             .gte("screening_score", cutoff)\
             .execute()
 
@@ -115,7 +123,7 @@ def send_form_bulk(vacancy_id: str, cutoff: int):
 
         for candidate in candidates.data:
 
-            # 🚨 IMPORTANT: Skip already sent
+            # 🚨 Skip already sent
             if candidate["status"] == "form_sent":
                 continue
 
@@ -638,6 +646,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
