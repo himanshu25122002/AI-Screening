@@ -235,6 +235,11 @@ function startGlobalTimer() {
     if (remaining <= 0) {
       clearInterval(globalTimerInterval);
       updateTimeProgress(100);
+      setTimeout(() => {
+        if (!interviewCompleted) {
+          finishInterview(false);
+        }
+      }, 1000);
       return;
     }
 
