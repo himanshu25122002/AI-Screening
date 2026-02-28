@@ -1235,4 +1235,25 @@ body[data-state="completed"] .status-orb::after {
   .sidebar-timer-display {
     font-size: 42px;
   }
+
+   /* Hide per-question 60s timer */
+  .header-time,
+  #hiddenTimer,
+  #timerBar {
+    display: none !important;
+  }
+   /* Hide interview progress bar */
+  #progressFill,
+  #progressGlow,
+  #progressPct,
+  .progress-container,
+  .interview-progress {
+    display: none !important;
+  }
+  #sidebarTimer {
+    display: none !important;
+  }
+  .start-feature:nth-child(2) {
+    display: none !important;
+  } 
 }
