@@ -486,6 +486,38 @@ if page == "📊 Hiring Pipeline":
         hide_index=True
     )
 
+    st.markdown("### 📤 Bulk Google Form Sender")
+
+    if st.session_state.selected_job != "All Jobs":
+
+        selected_vacancy_id = None
+        for v in vacancies:
+            if v["job_role"] == st.session_state.selected_job:
+                selected_vacancy_id = v["id"]
+                break
+
+        cutoff = st.number_input(
+            "Resume Passing Score",
+            min_value=0,
+            max_value=100,
+            value=90
+        )
+
+        if st.button("🚀 Send Google Form to Qualified Candidates"):
+
+            res = requests.post(
+                f"{BACKEND_URL}/vacancies/{selected_vacancy_id}/send-form-bulk",
+                params={"cutoff": cutoff}
+            )
+
+            if res.status_code == 200:
+                count = res.json().get("sent_count", 0)
+                st.success(f"✅ Sent Google Form to {count} candidates")
+                st.rerun()
+            else:
+                st.error("❌ Failed to send bulk forms")
+                st.text(res.text)
+            
     st.markdown("### HR Manual Actions")
 
     candidate_options = {}
@@ -847,6 +879,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
