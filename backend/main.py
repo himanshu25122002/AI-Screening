@@ -102,6 +102,44 @@ def get_vacancy(vacancy_id: str):
     except Exception as e:
         raise HTTPException(status_code=404, detail="Vacancy not found")
 
+@app.post("/vacancies/{vacancy_id}/send-form-bulk")
+def send_form_bulk(vacancy_id: str, cutoff: int):
+    try:
+        candidates = supabase.table("candidates")\
+            .select("*")\
+            .eq("vacancy_id", vacancy_id)\
+            .gte("screening_score", cutoff)\
+            .execute()
+
+        sent_count = 0
+
+        for candidate in candidates.data:
+
+            # 🚨 IMPORTANT: Skip already sent
+            if candidate["status"] == "form_sent":
+                continue
+
+            email_service.send_form_invitation(
+                candidate["id"],
+                candidate["email"],
+                candidate["name"]
+            )
+
+            supabase.table("candidates").update({
+                "status": "form_sent",
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("id", candidate["id"]).execute()
+
+            sent_count += 1
+
+        return {
+            "success": True,
+            "sent_count": sent_count
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/candidates")
 async def create_candidate(
     background_tasks: BackgroundTasks,
@@ -600,6 +638,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
