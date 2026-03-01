@@ -169,14 +169,23 @@ def next_question(payload: InterviewPayload):
         transcript[-1]["answer"] = payload.answer
 
 
-    if ends_at_str:
+    if session.get("ends_at"):
+        now_utc = datetime.now(timezone.utc)
+
         ends_at = datetime.fromisoformat(
-            ends_at_str.replace("Z", "+00:00")
+            session["ends_at"].replace("Z", "+00:00")
         )
+
         if ends_at.tzinfo is None:
             ends_at = ends_at.replace(tzinfo=timezone.utc)
 
         if now_utc >= ends_at:
+        
+            supabase.table("ai_interview_sessions").update({
+                "transcript": transcript,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("candidate_id", payload.candidate_id).execute()
+
             return {
                 "completed": True,
                 "message": "Interview duration completed."
@@ -338,19 +347,7 @@ No markdown.
         "transcript": transcript,
         "updated_at": datetime.utcnow().isoformat()
     }).eq("candidate_id", payload.candidate_id).execute()
-
-    if ends_at_str:
-        ends_at = datetime.fromisoformat(
-            ends_at_str.replace("Z", "+00:00")
-        )
-        if ends_at.tzinfo is None:
-            ends_at = ends_at.replace(tzinfo=timezone.utc)
-
-        if now_utc >= ends_at:
-            return {
-                "completed": True,
-                "message": "Interview duration completed."
-            }
+    
 
     return {
         "completed": False,
