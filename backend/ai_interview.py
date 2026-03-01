@@ -112,7 +112,7 @@ def next_question(payload: InterviewPayload):
     if not session_res.data:
         raise HTTPException(status_code=403, detail="Interview session inactive")
 
-    session = session_res.data[0]
+    session = session_res.data
     # START INTERVIEW TIMER WHEN FIRST QUESTION IS GENERATED
     if not session.get("ends_at"):
 
@@ -159,7 +159,7 @@ def next_question(payload: InterviewPayload):
 
     if session:
         question_count = session["question_count"]
-        transcript = session.get("transcript", [])
+        transcript = session.get("transcript") or []
     
 
 
@@ -397,13 +397,15 @@ def evaluate_interview(payload: InterviewPayload):
         supabase.table("ai_interview_sessions")
         .select("*")
         .eq("candidate_id", payload.candidate_id)
+        .eq("is_active", True)
+        .single()
         .execute()
     )
 
     if not session_res.data:
         raise HTTPException(status_code=400, detail="Interview session not found")
 
-    session = session_res.data[0]
+    session = session_res.data
 
 
 
