@@ -105,6 +105,7 @@ def next_question(payload: InterviewPayload):
         .select("*")
         .eq("candidate_id", payload.candidate_id)
         .eq("is_active", True)
+        .single()
         .execute()
     )
 
