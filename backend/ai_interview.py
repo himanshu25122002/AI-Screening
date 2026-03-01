@@ -158,7 +158,7 @@ def next_question(payload: InterviewPayload):
 
 
     if session:
-        question_count = session["question_count"]
+        question_count = session.get("question_count") or 0
         transcript = session.get("transcript") or []
     
 
