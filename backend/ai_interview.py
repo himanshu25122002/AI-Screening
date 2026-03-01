@@ -117,13 +117,28 @@ def next_question(payload: InterviewPayload):
 
         now_utc = datetime.now(timezone.utc)
 
-        vacancy_res = (
-            supabase.table("vacancies")
-            .select("interview_duration_minutes")
-            .eq("id", session["vacancy_id"])
+        # Fetch candidate first to get vacancy_id safely
+        candidate_res = (
+            supabase.table("candidates")
+            .select("vacancy_id")
+            .eq("id", payload.candidate_id)
             .single()
             .execute()
         )
+
+        candidate_data = candidate_res.data
+
+        if not candidate_data or not candidate_data.get("vacancy_id"):
+            raise HTTPException(status_code=400, detail="Candidate vacancy not found")
+
+        vacancy_res = (
+            supabase.table("vacancies")
+            .select("interview_duration_minutes")
+            .eq("id", candidate_data["vacancy_id"])
+            .single()
+            .execute()
+        )
+
 
         duration = vacancy_res.data.get("interview_duration_minutes", 15)
 
