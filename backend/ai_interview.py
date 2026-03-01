@@ -159,6 +159,8 @@ def next_question(payload: InterviewPayload):
         ends_at = datetime.fromisoformat(
             ends_at_str.replace("Z", "+00:00")
         )
+        if ends_at.tzinfo is None:
+            ends_at = ends_at.replace(tzinfo=timezone.utc)
 
         if now_utc >= ends_at:
             return {
