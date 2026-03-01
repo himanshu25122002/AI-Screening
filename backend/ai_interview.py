@@ -155,6 +155,19 @@ def next_question(payload: InterviewPayload):
 
     ends_at_str = session.get("ends_at")
 
+
+    if session:
+        question_count = session["question_count"]
+        transcript = session.get("transcript", [])
+    
+
+
+
+    
+    if payload.answer and transcript:
+        transcript[-1]["answer"] = payload.answer
+
+
     if ends_at_str:
         ends_at = datetime.fromisoformat(
             ends_at_str.replace("Z", "+00:00")
@@ -167,17 +180,6 @@ def next_question(payload: InterviewPayload):
                 "completed": True,
                 "message": "Interview duration completed."
             }
-
-    if session:
-        question_count = session["question_count"]
-        transcript = session.get("transcript", [])
-    
-
-
-
-    
-    if payload.answer and transcript:
-        transcript[-1]["answer"] = payload.answer
 
 
     last_answer = (
@@ -335,6 +337,19 @@ No markdown.
         "transcript": transcript,
         "updated_at": datetime.utcnow().isoformat()
     }).eq("candidate_id", payload.candidate_id).execute()
+
+    if ends_at_str:
+        ends_at = datetime.fromisoformat(
+            ends_at_str.replace("Z", "+00:00")
+        )
+        if ends_at.tzinfo is None:
+            ends_at = ends_at.replace(tzinfo=timezone.utc)
+
+        if now_utc >= ends_at:
+            return {
+                "completed": True,
+                "message": "Interview duration completed."
+            }
 
     return {
         "completed": False,
