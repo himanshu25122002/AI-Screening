@@ -165,8 +165,11 @@ def next_question(payload: InterviewPayload):
 
 
     
-    if payload.answer and transcript:
-        transcript[-1]["answer"] = payload.answer
+    if transcript:
+        if payload.answer:
+            transcript[-1]["answer"] = payload.answer
+        elif transcript[-1].get("answer") is None:
+            transcript[-1]["answer"] = "No answer provided."
 
 
     if session.get("ends_at"):
@@ -409,7 +412,10 @@ def evaluate_interview(payload: InterviewPayload):
 
 
 
-    transcript = session["transcript"]
+    transcript = session.get("transcript") or []
+    for t in transcript:
+        if not t.get("answer"):
+            t["answer"] = "No answer provided."
 
     # 🔒 Save last answer
     if payload.answer and transcript:
