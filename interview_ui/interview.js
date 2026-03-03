@@ -24,6 +24,7 @@ if (!token) {
 }
 
 let interviewCompleted = false;
+let globalTimeExpired = false;
 let interviewPaused = false;
 let fullscreenExitCount = 0;
 let tabSwitchCount = 0;
@@ -164,7 +165,16 @@ function startTimer() {
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
-      submitAnswer();
+
+      const finalAnswer = answerBox.value.trim();
+
+      if (finalAnswer) {
+        submitAnswer();
+      } else {
+    
+        fetchQuestion(null);
+      }
+
       return;
     }
   }, 1000);
@@ -223,14 +233,8 @@ function startGlobalTimer() {
     if (remaining <= 0) {
       clearInterval(globalTimerInterval);
       updateTimeProgress(100);
-      try { recognition.stop(); } catch {}
-      const finalAnswer = answerBox.value.trim();
 
-      if (finalAnswer) {
-        submitAnswer();
-      } else {
-        fetchQuestion(null);
-      }
+      globalTimeExpired = true;
 
       return;
     }
