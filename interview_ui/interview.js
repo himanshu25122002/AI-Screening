@@ -223,7 +223,15 @@ function startGlobalTimer() {
     if (remaining <= 0) {
       clearInterval(globalTimerInterval);
       updateTimeProgress(100);
-      finishInterview(false);
+      try { recognition.stop(); } catch {}
+      const finalAnswer = answerBox.value.trim();
+
+      if (finalAnswer) {
+        submitAnswer();
+      } else {
+        fetchQuestion(null);
+      }
+
       return;
     }
 
