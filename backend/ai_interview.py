@@ -5,7 +5,6 @@ import json
 from zoneinfo import ZoneInfo
 from openai import OpenAI
 from fastapi.responses import StreamingResponse
-import openai
 import io
 import os
 from backend.database import supabase
