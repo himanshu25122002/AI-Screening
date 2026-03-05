@@ -4,7 +4,10 @@ from datetime import datetime, timezone, timedelta
 import json
 from zoneinfo import ZoneInfo
 from openai import OpenAI
-
+from fastapi.responses import StreamingResponse
+import openai
+import io
+import os
 from backend.database import supabase
 from backend.services.email_service import email_service
 from backend.config import config
@@ -91,6 +94,28 @@ def validate_interview(payload: TokenPayload):
 
 
 
+
+@router.post("/tts")
+async def text_to_speech(payload: dict):
+    text = payload.get("text")
+
+    if not text:
+        return {"error": "Text required"}
+
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    response = client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",   # ChatGPT voice
+        input=text
+    )
+
+    audio_bytes = response.read()
+
+    return StreamingResponse(
+        io.BytesIO(audio_bytes),
+        media_type="audio/mpeg"
+    )
 # =====================================================
 # NEXT QUESTION
 # =====================================================
