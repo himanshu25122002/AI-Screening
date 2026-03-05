@@ -101,7 +101,7 @@ async def text_to_speech(payload: dict):
     if not text:
         return {"error": "Text required"}
 
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(api_key=config.OPENAI_API_KEY)
 
     response = client.audio.speech.create(
         model="gpt-4o-mini-tts",
@@ -119,7 +119,7 @@ async def text_to_speech(payload: dict):
 @router.post("/stt")
 async def speech_to_text(audio: UploadFile = File(...)):
 
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(api_key=config.OPENAI_API_KEY)
 
     transcript = client.audio.transcriptions.create(
         model="whisper-1",
