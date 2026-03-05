@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 import json
@@ -116,6 +116,18 @@ async def text_to_speech(payload: dict):
         io.BytesIO(audio_bytes),
         media_type="audio/mpeg"
     )
+
+@router.post("/stt")
+async def speech_to_text(audio: UploadFile = File(...)):
+
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio.file
+    )
+
+    return {"text": transcript.text}
 # =====================================================
 # NEXT QUESTION
 # =====================================================
