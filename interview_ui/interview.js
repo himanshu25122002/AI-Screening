@@ -299,30 +299,43 @@ async function speak(text, onDone) {
 }
 
 /* ================= STT ================= */
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+let mediaRecorder;
+let audioChunks = [];
 
-if (!SpeechRecognition) {
-  alert("Speech recognition not supported.");
-}
+micBtn.onclick = async () => {
 
-const recognition          = new SpeechRecognition();
-recognition.lang           = "en-US";
-recognition.interimResults = false;
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-micBtn.onclick = () => {
-  answerBox.value = "";
-  setState("listening");
-  recognition.start();
-};
+  mediaRecorder = new MediaRecorder(stream);
 
-recognition.onresult = (e) => {
-  answerBox.value = e.results[0][0].transcript;
-};
+  audioChunks = [];
 
-recognition.onend = () => {
-  setState("idle");
-  answerBox.focus();
+  mediaRecorder.ondataavailable = (event) => {
+    audioChunks.push(event.data);
+  };
+
+  mediaRecorder.onstop = async () => {
+
+    const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+
+    const formData = new FormData();
+    formData.append("audio", audioBlob);
+
+    const res = await fetch(`${API_BASE}/ai-interview/stt`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    answerBox.value = data.text;
+  };
+
+  mediaRecorder.start();
+
+  setTimeout(() => {
+    mediaRecorder.stop();
+  }, 10000); // 10 sec recording
 };
 
 /* ================= CAMERA (DISABLED) ================= */
