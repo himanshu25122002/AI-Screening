@@ -474,16 +474,20 @@ if page == "📊 Hiring Pipeline":
     df["Resume Score"] = df["screening_score"]
     df["Applied At"] = pd.to_datetime(df["created_at"], utc=True).dt.tz_convert("Asia/Kolkata").dt.strftime("%d-%m-%Y %H:%M")
     display_df = df[
-        ["name", "email", "Job Name", "Resume Score", "Status", "Applied At"]
+        ["name", "email", "resume_url", "Job Name", "Resume Score", "Status", "Applied At"]
     ].rename(columns={
         "name": "Candidate Name",
-        "email": "Email"
+        "email": "Email",
+        "resume_url": "Resume"
     })
 
     st.dataframe(
         display_df,
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
+        column_config={
+            "Resume": st.column_config.LinkColumn("Resume")
+        }
     )
 
     st.markdown("### 📤 Bulk Google Form Sender")
@@ -882,6 +886,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
