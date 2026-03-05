@@ -219,13 +219,25 @@ async def create_candidate(
                 "message": "Candidate already exists for this job"
             }
 
+        file_ext = resume.filename.split(".")[-1]
+        file_name = f"{uuid4()}.{file_ext}"
+        file_path = f"resumes/{file_name}"
+
+        supabase.storage.from_("resumes").upload(
+            file_path,
+            resume_content,
+            {"content-type": resume.content_type}
+        )
+
+        public_url = supabase.storage.from_("resumes").get_public_url(file_path)
+
         candidate_data = {
             "vacancy_id": vacancy_id,
             "name": final_name,
             "email": extracted_email,
             "phone": phone or basic_info.get("phone"),
             "resume_text": resume_text,
-            "resume_url": f"uploads/{resume.filename}",
+            "resume_url": public_url,
             "status": "new"
         }
 
@@ -646,6 +658,7 @@ def get_vacancy_stats(vacancy_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
 
