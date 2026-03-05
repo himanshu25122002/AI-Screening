@@ -265,19 +265,37 @@ function startGlobalTimer() {
 
 
 /* ================= TTS ================= */
-function speak(text, onDone) {
+async function speak(text, onDone) {
   if (interviewPaused || interviewCompleted) return;
-  speechSynthesis.cancel();
 
-  const u    = new SpeechSynthesisUtterance(text);
-  u.rate     = 0.95;
-  u.pitch    = 1;
-  u.volume   = 1;
-  u.onend    = () => {
-    if (!interviewPaused && onDone) onDone();
-  };
+  try {
+    const res = await fetch(`${API_BASE}/ai-interview/tts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text })
+    });
 
-  speechSynthesis.speak(u);
+    const audioBlob = await res.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    const audio = new Audio(audioUrl);
+
+    audio.onended = () => {
+      if (!interviewPaused && onDone) onDone();
+    };
+
+    audio.play();
+
+  } catch (e) {
+    console.error("TTS failed:", e);
+
+    // fallback to browser speech
+    const u = new SpeechSynthesisUtterance(text);
+    u.onend = () => onDone && onDone();
+    speechSynthesis.speak(u);
+  }
 }
 
 /* ================= STT ================= */
