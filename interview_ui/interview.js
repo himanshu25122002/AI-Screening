@@ -304,38 +304,89 @@ let audioChunks = [];
 
 micBtn.onclick = async () => {
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  try {
 
-  mediaRecorder = new MediaRecorder(stream);
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-  audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
 
-  mediaRecorder.ondataavailable = (event) => {
-    audioChunks.push(event.data);
-  };
+    mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data);
+    };
 
-  mediaRecorder.onstop = async () => {
+    mediaRecorder.onstop = async () => {
 
-    const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 
-    const formData = new FormData();
-    formData.append("audio", audioBlob);
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
 
-    const res = await fetch(`${API_BASE}/ai-interview/stt`, {
-      method: "POST",
-      body: formData
-    });
+      try {
 
-    const data = await res.json();
+        // PRIMARY: OpenAI Whisper STT
+        const res = await fetch(`${API_BASE}/ai-interview/stt`, {
+          method: "POST",
+          body: formData
+        });
 
-    answerBox.value = data.text;
-  };
+        if (!res.ok) {
+          throw new Error("Whisper STT request failed");
+        }
 
-  mediaRecorder.start();
+        const data = await res.json();
 
-  setTimeout(() => {
-    mediaRecorder.stop();
-  }, 10000); // 10 sec recording
+        if (data && data.text) {
+          answerBox.value = data.text;
+          return;
+        }
+
+        throw new Error("Whisper returned empty text");
+
+      } catch (err) {
+
+        console.warn("⚠️ Whisper STT failed. Falling back to browser STT.", err);
+
+        const SpeechRecognition =
+          window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+          alert("Speech recognition not supported in this browser.");
+          return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.start();
+
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          answerBox.value = transcript;
+        };
+
+        recognition.onerror = (e) => {
+          console.error("Browser STT error:", e);
+        };
+
+      }
+
+    };
+
+    mediaRecorder.start();
+
+    // stop recording after 10 seconds
+    setTimeout(() => {
+      mediaRecorder.stop();
+    }, 10000);
+
+  } catch (err) {
+    console.error("Mic access error:", err);
+    alert("Microphone access is required for voice input.");
+  }
+
 };
 
 /* ================= CAMERA (DISABLED) ================= */
