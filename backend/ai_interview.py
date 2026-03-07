@@ -42,7 +42,7 @@ def validate_interview(payload: TokenPayload):
         .select("*")
         .eq("interview_token", token)
         .eq("is_active", True)   # 🔥 CRITICAL
-        .limit(1)
+        .single()
         .execute()
     )
 
@@ -140,14 +140,14 @@ def next_question(payload: InterviewPayload):
         .table("ai_interview_sessions")
         .select("*")
         .eq("candidate_id", payload.candidate_id)
-        .order("created_at", desc=True)
-        .limit(1)
+        .eq("is_active", True)
+        .single()
         .execute()
     )
 
     if not session_res.data:
-        raise HTTPException(status_code=400, detail="Interview session not found")
-    session = session_res.data[0]
+        raise HTTPException(status_code=403, detail="Interview session inactive")
+    session = session_res.data
 
     # START INTERVIEW TIMER WHEN FIRST QUESTION IS GENERATED
     if not session.get("ends_at"):
@@ -222,7 +222,6 @@ def next_question(payload: InterviewPayload):
         
             supabase.table("ai_interview_sessions").update({
                 "transcript": transcript,
-                "is_active": False,
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("candidate_id", payload.candidate_id).execute()
 
@@ -438,7 +437,7 @@ def evaluate_interview(payload: InterviewPayload):
         .select("*")
         .eq("candidate_id", payload.candidate_id)
         .eq("is_active", True)
-        .limit(1)
+        .single()
         .execute()
     )
 
