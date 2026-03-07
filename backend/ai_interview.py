@@ -502,33 +502,34 @@ EVALUATION RULES (STRICT)
 8. Be practical, not harsh.
 9. Avoid extreme scoring unless performance is clearly poor.
 
-━━━━━━━━━━━━━━━━━━━━━━
-SCORING SYSTEM (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━
+CUSTOM SCORING SYSTEM
 
-Each category MUST be scored out of 25.
+If HR provided evaluation criteria:
 
-Categories:
-- Skill (0–25)
-- Communication (0–25)
-- Problem Solving (0–25)
-- Culture Fit (0–25)
+Use those criteria and weights when judging the interview.
 
-⚠️ Hard Constraints:
-- No category can exceed 25.
-- No decimals.
-- No negative values.
+Example:
+skill: 25%
+problem_solving: 40%
+communication: 10%
 
-━━━━━━━━━━━━━━━━━━━━━━
-OVERALL SCORE
-━━━━━━━━━━━━━━━━━━━━━━
+Interpret weights as relative importance.
 
-Overall Score MUST equal:
+You DO NOT need to output category scores.
 
-Skill + Communication + Problem Solving + Culture Fit
+Instead, compute a single overall_score (0–100).
 
-Overall Score MUST be out of 100.
-It MUST be the exact mathematical sum.
+If no criteria are provided:
+Evaluate the candidate holistically based on:
+
+- knowledge
+- reasoning
+- communication
+- problem solving
+- confidence
+- practical understanding
+
+The evaluation should be FAIR and not overly strict.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 RECOMMENDATION LOGIC
@@ -545,10 +546,6 @@ RETURN STRICT JSON ONLY
 ━━━━━━━━━━━━━━━━━━━━━━
 Return JSON in this format:
 {{
-  "skill_score": <0-25>,
-  "communication_score": <0-25>,
-  "problem_solving_score": <0-25>,
-  "culture_fit_score": <0-25>,
   "overall_score": <0-100>,
   "recommendation": "<Strong Fit | Moderate Fit | Not Recommended>",
   "evaluation_notes": "<3-5 sentence professional explanation>"
@@ -562,10 +559,6 @@ Return JSON in this format:
         evaluation = json.loads(raw)
     except Exception:
         evaluation = {
-            "skill_score": 15,
-            "communication_score": 15,
-            "problem_solving_score": 15,
-            "culture_fit_score": 15,
             "overall_score": 60,
             "recommendation": "Moderate Fit",
             "evaluation_notes": "Fallback evaluation"
@@ -585,10 +578,6 @@ Return JSON in this format:
         "candidate_id": payload.candidate_id,
         "vacancy_id": candidate["vacancy_id"],
         "interview_transcript": transcript,
-        "skill_score": evaluation["skill_score"],
-        "communication_score": evaluation["communication_score"],
-        "problem_solving_score": evaluation["problem_solving_score"],
-        "culture_fit_score": evaluation["culture_fit_score"],
         "overall_score": evaluation["overall_score"],
         "recommendation": evaluation["recommendation"],
         "evaluation_notes": evaluation["evaluation_notes"],
