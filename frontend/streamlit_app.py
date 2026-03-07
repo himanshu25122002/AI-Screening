@@ -824,10 +824,6 @@ if page == "🎤 AI Interviews":
             "Candidate ID": row["id"],
             "Name": row["name"],
             "Job Profile": row["Job Profile"],
-            "Skill": interview_data.get("skill_score"),
-            "Communication": interview_data.get("communication_score"),
-            "Problem Solving": interview_data.get("problem_solving_score"),
-            "Culture Fit": interview_data.get("culture_fit_score"),
             "Overall": interview_data.get("overall_score"),
             "Recommendation": interview_data.get("recommendation"),
         })
@@ -886,6 +882,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
