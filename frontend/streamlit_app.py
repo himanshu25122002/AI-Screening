@@ -227,7 +227,7 @@ if page == "📥 HR Intake":
                 if crit_name:
                     st.session_state.resume_criteria.append((crit_name, crit_weight))
         resume_dict = {k: v for k, v in st.session_state.resume_criteria}
-        st.write("Current Resume Criteria:", resume_dict)
+        st.write("Current Interview Evaluation Criteria:", resume_dict)
         
         submitted = st.form_submit_button("🚀 Create Job")
 
@@ -882,6 +882,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
