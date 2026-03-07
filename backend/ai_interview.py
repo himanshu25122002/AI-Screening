@@ -222,6 +222,7 @@ def next_question(payload: InterviewPayload):
         
             supabase.table("ai_interview_sessions").update({
                 "transcript": transcript,
+                "is_active": False,
                 "updated_at": datetime.utcnow().isoformat()
             }).eq("candidate_id", payload.candidate_id).execute()
 
