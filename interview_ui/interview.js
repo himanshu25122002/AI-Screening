@@ -266,10 +266,12 @@ function startGlobalTimer() {
 
 /* ================= TTS ================= */
 async function speak(text, onDone) {
+
   if (interviewPaused || interviewCompleted) return;
 
   try {
-    const res = await fetch(`${API_BASE}/ai-interview/tts`, {
+
+    const res = await fetch(`${API_BASE}/tts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -277,9 +279,18 @@ async function speak(text, onDone) {
       body: JSON.stringify({ text })
     });
 
-    const audioBlob = await res.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
+    // 🔴 CRITICAL CHECK
+    if (!res.ok) {
+      throw new Error("TTS API failed");
+    }
 
+    const audioBlob = await res.blob();
+
+    if (!audioBlob || audioBlob.size === 0) {
+      throw new Error("Empty audio returned");
+    }
+
+    const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
 
     audio.onended = () => {
@@ -289,15 +300,22 @@ async function speak(text, onDone) {
     audio.play();
 
   } catch (e) {
-    console.error("TTS failed:", e);
 
-    // fallback to browser speech
+    console.warn("⚠️ TTS API failed — using browser speech", e);
+
+    // ✅ FALLBACK TO BROWSER TTS
     const u = new SpeechSynthesisUtterance(text);
-    u.onend = () => onDone && onDone();
+    u.lang = "en-US";
+    u.rate = 1;
+    u.pitch = 1;
+
+    u.onend = () => {
+      if (onDone) onDone();
+    };
+
     speechSynthesis.speak(u);
   }
 }
-
 /* ================= STT ================= */
 let mediaRecorder;
 let audioChunks = [];
@@ -317,7 +335,7 @@ micBtn.onclick = async () => {
 
     mediaRecorder.onstop = async () => {
 
-      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
 
       const formData = new FormData();
       formData.append("audio", audioBlob);
@@ -325,7 +343,7 @@ micBtn.onclick = async () => {
       try {
 
         // PRIMARY: OpenAI Whisper STT
-        const res = await fetch(`${API_BASE}/ai-interview/stt`, {
+        const res = await fetch(`${API_BASE}/stt`, {
           method: "POST",
           body: formData
         });
