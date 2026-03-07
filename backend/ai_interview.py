@@ -42,7 +42,7 @@ def validate_interview(payload: TokenPayload):
         .select("*")
         .eq("interview_token", token)
         .eq("is_active", True)   # 🔥 CRITICAL
-        .single()
+        .limit(1)
         .execute()
     )
 
@@ -438,7 +438,7 @@ def evaluate_interview(payload: InterviewPayload):
         .select("*")
         .eq("candidate_id", payload.candidate_id)
         .eq("is_active", True)
-        .single()
+        .limit(1)
         .execute()
     )
 
