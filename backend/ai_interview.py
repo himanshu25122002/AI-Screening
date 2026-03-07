@@ -431,7 +431,7 @@ def evaluate_interview(payload: InterviewPayload):
     )
 
     vacancy_data = vacancy_res.data
-
+    interview_criteria = vacancy_data.get("interview_evaluation_criteria")
     session_res = (
         supabase.table("ai_interview_sessions")
         .select("*")
@@ -462,6 +462,28 @@ def evaluate_interview(payload: InterviewPayload):
         for t in transcript if t.get("answer")
     )
 
+    criteria_block = ""
+
+    if interview_criteria:
+        criteria_text = "\n".join(
+            [f"- {k}: {v}%" for k, v in interview_criteria.items()]
+        )
+
+        criteria_block = f"""
+━━━━━━━━━━━━━━━━━━━━━━
+HR EVALUATION WEIGHTS
+━━━━━━━━━━━━━━━━━━━━━━
+The HR defined the following evaluation priorities:
+
+{criteria_text}
+
+Interpret these weights as importance.
+
+You MUST prioritize evaluation based on these weights when deciding the overall_score.
+
+Do NOT output category scores.
+Only output overall_score.
+        """
     eval_prompt = f"""
 You are a senior hiring panel conducting a final interview evaluation.
 
@@ -502,34 +524,27 @@ EVALUATION RULES (STRICT)
 8. Be practical, not harsh.
 9. Avoid extreme scoring unless performance is clearly poor.
 
-CUSTOM SCORING SYSTEM
+{criteria_block}
 
-If HR provided evaluation criteria:
+━━━━━━━━━━━━━━━━━━━━━━
+SCORING METHOD
+━━━━━━━━━━━━━━━━━━━━━━
 
-Use those criteria and weights when judging the interview.
+If HR criteria are provided:
+Use them to guide the overall_score.
 
-Example:
-skill: 25%
-problem_solving: 40%
-communication: 10%
+If no criteria exist:
+Evaluate candidate holistically based on:
 
-Interpret weights as relative importance.
+• knowledge
+• reasoning
+• clarity
+• practical thinking
+• communication
+• confidence
 
-You DO NOT need to output category scores.
-
-Instead, compute a single overall_score (0–100).
-
-If no criteria are provided:
-Evaluate the candidate holistically based on:
-
-- knowledge
-- reasoning
-- communication
-- problem solving
-- confidence
-- practical understanding
-
-The evaluation should be FAIR and not overly strict.
+Be fair and realistic.
+Do not be overly strict.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 RECOMMENDATION LOGIC
