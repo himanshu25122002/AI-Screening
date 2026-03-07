@@ -527,17 +527,9 @@ function showQuestion(q, isFirst = false) {
 
   setState("asking");
 
-  if (isFirst) {
-    speak(q, () => {
-      setTimeout(() => {
-        if (!interviewCompleted && !interviewPaused) startTimer();
-      }, 500);
-    });
-  } else {
-    speak(q, () => {
-      if (!interviewCompleted && !interviewPaused) startTimer();
-    });
-  }
+  speak(q, () => {
+    if (!interviewCompleted && !interviewPaused) startTimer();
+  });
 }
 
 
