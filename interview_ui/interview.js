@@ -326,7 +326,9 @@ micBtn.onclick = async () => {
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: "audio/webm;codecs=opus"
+    });
     audioChunks = [];
 
     mediaRecorder.ondataavailable = (event) => {
@@ -335,7 +337,7 @@ micBtn.onclick = async () => {
 
     mediaRecorder.onstop = async () => {
 
-      const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 
       const formData = new FormData();
       formData.append("audio", audioBlob);
