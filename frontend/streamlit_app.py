@@ -219,7 +219,7 @@ if page == "📥 HR Intake":
             st.session_state.resume_criteria = []
         col1, col2, col3 = st.columns([4,2,1])
         with col1:
-            crit_name = st.text_input("Criterion Name", key="resume_crit_name")
+            crit_name = st.text_input("Interview Criterion", key="resume_crit_name")
         with col2:
             crit_weight = st.number_input("Weight %",min_value=0, max_value=100, key="resume_crit_weight")
         with col3:
@@ -260,7 +260,7 @@ if page == "📥 HR Intake":
                     "google_calendar_link": google_calendar_link,
                     "resume_cutoff_score": resume_cutoff_score if resume_cutoff_score > 0 else None,
                     "interview_cutoff_score": interview_cutoff_score if interview_cutoff_score > 0 else None,
-                    "resume_evaluation_criteria": resume_dict if resume_dict else None,
+                    "interview_evaluation_criteria": resume_dict if resume_dict else None,
                     "interview_duration_minutes": interview_duration_minutes,
                     "interview_custom_prompt": interview_custom_prompt if interview_custom_prompt else None
                 }
@@ -886,6 +886,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
