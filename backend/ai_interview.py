@@ -177,7 +177,7 @@ def next_question(payload: InterviewPayload):
         )
 
 
-        duration = vacancy_res.data.get("interview_duration_minutes", 15)
+        duration = int(vacancy_res.data.get("interview_duration_minutes") or 15)
 
         ends_at = now_utc + timedelta(minutes=duration)
 
