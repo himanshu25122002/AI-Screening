@@ -339,7 +339,7 @@ RESUME TEXT
 
         candidate_data = candidate.data
         vacancy_data = vacancy.data
-        criteria = vacancy_data.get("resume_evaluation_criteria")
+        criteria = None
 
 
         resume_text = candidate_data.get("resume_text", "")
@@ -383,10 +383,7 @@ RESUME TEXT
        
         weightage_block = ""
 
-        if criteria:
-            criteria_text = "\n".join(
-                [f"- {k}: {v}%" for k, v in criteria.items()]
-            )
+        criteria = None
 
             weightage_block = f"""
 
@@ -404,17 +401,7 @@ For each criterion:
 - Return category_scores in JSON
 
         """
-
-        if criteria:
-            output_format = """
-        {
-          "category_scores": {},
-          "experience_years": 0,
-          "screening_notes": ""
-        }
-        """
-        else:
-            output_format = """
+        output_format = """
         {
           "screening_score": 0,
           "extracted_skills": [],
@@ -527,16 +514,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
     # =========================
     # SAFE TYPE CASTING (CRITICAL)
     # =========================
-        if criteria:
-            category_scores = data.get("category_scores", {})
-            final_score = 0
-            for k, weight in criteria.items():
-                score = category_scores.get(k, 0)
-                final_score += score * (weight / 100)
-            screening_score = int(final_score)
-        else:
-            screening_score = int(float(data.get("screening_score", 0)))
-            
+        screening_score = int(float(data.get("screening_score", 0)))
         experience_years = int(float(data.get("experience_years", 0)))
         extracted_skills = data.get("extracted_skills", [])
         screening_notes = str(data.get("screening_notes", ""))
@@ -575,6 +553,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
