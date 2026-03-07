@@ -486,7 +486,7 @@ if page == "📊 Hiring Pipeline":
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Resume": st.column_config.LinkColumn("Resume")
+            "Resume": st.column_config.LinkColumn("Resume", display_text="📄 View Resume")
         }
     )
 
@@ -882,6 +882,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
