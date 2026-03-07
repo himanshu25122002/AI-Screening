@@ -122,8 +122,8 @@ async def speech_to_text(audio: UploadFile = File(...)):
     client = OpenAI(api_key=config.OPENAI_API_KEY)
 
     transcript = client.audio.transcriptions.create(
-        model="whisper-1",
-        file=audio.file
+        model="gpt-4o-mini-transcribe",
+        file=(audio.filename or "audio.webm", await audio.read())
     )
 
     return {"text": transcript.text}
