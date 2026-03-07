@@ -380,35 +380,10 @@ RESUME TEXT
             }).eq("id", candidate_id).execute()
 
             candidate_data["name"] = extracted_name
-       
+
+
         weightage_block = ""
-
-        criteria = None
-
-            weightage_block = f"""
-
-━━━━━━━━━━━━━━━━━━━━━━
-CUSTOM EVALUATION WEIGHTAGE (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━
-Evaluate resume based on the following weighted criteria:
-
-{criteria_text}
-
-For each criterion:
-- Score 0–100
-- Be realistic and fair
-- Do NOT calculate final weighted score
-- Return category_scores in JSON
-
-        """
-        output_format = """
-        {
-          "screening_score": 0,
-          "extracted_skills": [],
-          "experience_years": 0,
-          "screening_notes": ""
-        }
-        """
+        
         prompt = f"""
   
 You are a production-grade ATS scoring engine used by modern hiring platforms.
@@ -553,6 +528,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
