@@ -383,7 +383,14 @@ RESUME TEXT
 
 
         weightage_block = ""
-        
+        output_format = """
+{
+  "screening_score": number,
+  "experience_years": number,
+  "extracted_skills": ["skill1","skill2"],
+  "screening_notes": "short explanation"
+}
+        """
         prompt = f"""
   
 You are a production-grade ATS scoring engine used by modern hiring platforms.
@@ -492,6 +499,8 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         screening_score = int(float(data.get("screening_score", 0)))
         experience_years = int(float(data.get("experience_years", 0)))
         extracted_skills = data.get("extracted_skills", [])
+        if not isinstance(extracted_skills, list):
+            extracted_skills = []
         screening_notes = str(data.get("screening_notes", ""))
     # =========================
     # UPDATE CANDIDATE
@@ -528,6 +537,7 @@ OUTPUT FORMAT (STRICT JSON ONLY)
         return data
 
 ai_service = AIService()
+
 
 
 
