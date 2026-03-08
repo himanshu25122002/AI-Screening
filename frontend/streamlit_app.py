@@ -331,7 +331,7 @@ if page == "📥 HR Intake":
         "created_at": "Created At"
     })
 
-    st.dataframe(display_jobs, use_container_width=True, hide_index=True)
+    st.dataframe(display_jobs, width="stretch", hide_index=True)
 
     # =========================
     # SELECT JOB
@@ -339,8 +339,9 @@ if page == "📥 HR Intake":
     st.markdown("## 🎯 Select Job to Manage")
 
     selected_job_name = st.selectbox(
-        "",
-        df_jobs["job_role"].tolist()
+        "Select Job",
+        df_jobs["job_role"].tolist(),
+        label_visibility="collapsed"
     )
 
 
@@ -882,6 +883,7 @@ if page == "🎤 AI Interviews":
             st.markdown(f"**Q{idx}: {qa.get('question')}**")
             st.markdown(f"🗣 **Answer:** {qa.get('answer')}")
             st.markdown("---")
+
 
 
 
