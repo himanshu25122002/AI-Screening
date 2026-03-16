@@ -433,6 +433,7 @@ function buildVacancyPayloadFromForm(root){
     external_job_id: get("v_external_job_id"),
     job_role: get("v_job_role"),
     experience_years: Number(get("v_experience_years") || 0),
+    experience_level: get("v_experience_years"), 
     budget_min: Number(get("v_budget_min") || 0),
     budget_max: Number(get("v_budget_max") || 0),
     google_calendar_link: get("v_google_calendar_link"),
@@ -453,14 +454,16 @@ function buildVacancyPayloadFromForm(root){
       .split(",")
       .map(s => s.trim())
       .filter(Boolean),
+    created_by: "HR Dashboard",
   };
 
-  const criteria = [];
+  const criteria = {};
   $$('[data-crit-row]', root).forEach(row=>{
     const name = $('[data-crit-name]', row)?.value?.trim();
     const weight = $('[data-crit-weight]', row)?.value;
+
     if(name){
-      criteria.push({ name, weight: Number(weight || 0) });
+      criteria[name] = Number(weight || 0);
     }
   });
 
