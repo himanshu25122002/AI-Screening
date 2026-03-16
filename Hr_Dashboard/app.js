@@ -399,7 +399,7 @@ async function loadCandidates(force=false){
 async function loadForms(force=false){
   // Endpoint not explicitly listed except status; using /candidate-form/status as "submitted forms"
   if(state.cache.forms && !force) return state.cache.forms;
-  const data = await apiFetch(`/candidate-form/status`);
+  const data = await apiFetch(`/candidate-form/all`);
   const list = Array.isArray(data) ? data : (data?.data || data?.items || []);
   state.cache.forms = list;
   return list;
@@ -890,7 +890,7 @@ async function renderPipeline(noFetch=false){
   // KPIs
   const total = candidates.length;
   const filteredCount = rows.length;
-  const withResumeScore = candidates.filter(c => pick(c, ["resume_score","score","resumeScore"]) !== undefined).length;
+  const withResumeScore = candidates.filter(c => pick(c, ["resume_score","score","resumeScore","screening_score","ai_score"]) !== undefined).length;
   const pending = candidates.filter(c => {
     const s = normalizeStr(pick(c, ["status","candidate_status","stage"]));
     return !s || s.includes("new") || s.includes("applied") || s.includes("pending");
@@ -1112,7 +1112,7 @@ async function renderPipeline(noFetch=false){
           btn.disabled = true;
           btn.textContent = "Sending…";
           try{
-            await apiFetch(`/vacancies/${encodeURIComponent(id)}/send-form-bulk`, {method:"POST"});
+            await apiFetch(`/vacancies/${encodeURIComponent(id)}/send-form-bulk?cutoff=80`, {method:"POST"});
             toast("good","Bulk send started","Form links have been triggered in bulk.");
             close();
           }catch(err){
