@@ -891,7 +891,7 @@ async function renderPipeline(noFetch=false){
       { key:"resume", label:"Resume Link", render: r => {
         const link = safeUrl(pick(r, ["resume_link","resume_url","resume","pdf_url","resumeLink"]));
         if(!link) return `<span class="muted">—</span>`;
-        return `<a class="link" href="${escapeHtml(link)}" target="_blank" rel="noreferrer">Open PDF</a>`;
+        return `<a href="${resume_url}" target="_blank" class="link">📄 View Resume</a>`;
       }},
       { key:"job", label:"Job Name", value: r => {
         const jid = String(pick(r, ["job_id","vacancy_id","vacancyId","external_job_id"]) ?? "");
