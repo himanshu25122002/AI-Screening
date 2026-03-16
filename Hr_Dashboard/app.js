@@ -786,7 +786,7 @@ async function renderHRIntake(noFetch=false){
     e.preventDefault();
     const fd = new FormData();
     // do not change backend logic; append common keys
-    fd.append("job_id", $("#c_job").value);
+    fd.append("external_job_id", $("#c_job").value);
     fd.append("name", $("#c_name").value || "");
     fd.append("email", $("#c_email").value || "");
     const file = $("#c_resume").files?.[0];
