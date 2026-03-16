@@ -890,8 +890,9 @@ async function renderPipeline(noFetch=false){
       { key:"email", label:"Email", value: r => pick(r, ["email","candidate_email"]) ?? "" },
       { key:"resume", label:"Resume Link", render: r => {
         const link = safeUrl(pick(r, ["resume_link","resume_url","resume","pdf_url","resumeLink"]));
-        if(!link) return `<span class="muted">—</span>`;
-        const link = safeUrl(pick(r, ["resume_link","resume_url","resume","pdf_url","resumeLink"]));
+        if(!link){
+          return `<span class="muted">—</span>`;
+        }
         return `<a href="${link}" target="_blank" class="link">📄 View Resume</a>`;
       }},
       { key:"job", label:"Job Name", value: r => {
