@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATS Admin — Premium Dashboard</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <script>
+    window.ENV = {
+      API_BASE: "https://YOUR_BACKEND_URL"
+    }
+  </script>
+
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brandMark" aria-hidden="true"></div>
+        <div class="brandText">
+          <div class="brandName">Aurum ATS</div>
+          <div class="brandMeta">Admin Console</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="navItem active" data-route="hr">
+          <span class="navIcon" aria-hidden="true">⧉</span>
+          <span class="navLabel">HR Intake</span>
+        </button>
+        <button class="navItem" data-route="pipeline">
+          <span class="navIcon" aria-hidden="true">⇄</span>
+          <span class="navLabel">Hiring Pipeline</span>
+        </button>
+        <button class="navItem" data-route="forms">
+          <span class="navIcon" aria-hidden="true">⎘</span>
+          <span class="navLabel">Candidate Forms</span>
+        </button>
+        <button class="navItem" data-route="interviews">
+          <span class="navIcon" aria-hidden="true">◎</span>
+          <span class="navLabel">AI Interviews</span>
+        </button>
+      </nav>
+
+      <div class="sidebarFooter">
+        <div class="pill">
+          <span class="dot"></span>
+          <span class="pillText">Connected to API</span>
+        </div>
+        <div class="hint">Dark premium UI • Vanilla JS</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbarLeft">
+          <button class="iconBtn mobileOnly" id="sidebarToggle" aria-label="Toggle navigation">
+            <span aria-hidden="true">☰</span>
+          </button>
+          <div class="pageTitleWrap">
+            <div class="pageTitle" id="pageTitle">HR Intake</div>
+            <div class="pageSubtitle" id="pageSubtitle">Create roles, define evaluation criteria, and ingest resumes.</div>
+          </div>
+        </div>
+
+        <div class="topbarRight">
+          <div class="globalSearch">
+            <span class="gsIcon" aria-hidden="true">⌕</span>
+            <input id="globalSearchInput" type="search" placeholder="Search across loaded tables…" autocomplete="off" />
+            <button class="gsClear" id="globalSearchClear" title="Clear">×</button>
+          </div>
+
+          <button class="btn btnGhost" id="refreshCurrent">
+            <span class="btnIcon" aria-hidden="true">↻</span>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="content" id="content">
+        <!-- dynamic -->
+      </section>
+
+      <div class="toastWrap" id="toastWrap" aria-live="polite" aria-relevant="additions"></div>
+    </main>
+  </div>
+
+  <div class="modalOverlay" id="modalOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modalHeader">
+        <div class="modalTitle" id="modalTitle">Modal</div>
+        <button class="iconBtn" id="modalClose" aria-label="Close">×</button>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalFooter" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
