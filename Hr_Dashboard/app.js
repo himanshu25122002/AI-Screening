@@ -441,9 +441,18 @@ function buildVacancyPayloadFromForm(root){
     interview_duration_minutes: Number(get("v_interview_duration_minutes") || 0),
     interview_custom_prompt: get("v_interview_custom_prompt"),
     job_summary: get("v_job_summary"),
-    key_responsibilities: get("v_key_responsibilities"),
-    required_skills: get("v_required_skills"),
-    culture_traits: get("v_culture_traits"),
+    key_responsibilities: get("v_key_responsibilities")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean),
+    required_skills: get("v_required_skills")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean),
+    culture_traits: get("v_culture_traits")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean),
   };
 
   const criteria = [];
