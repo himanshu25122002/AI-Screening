@@ -913,7 +913,7 @@ async function renderPipeline(noFetch=false){
         const v = vacancyById.get(jid);
         return v ? vacancyDisplayName(v) : (pick(r, ["job_role","job_name","job"]) ?? "");
       }},
-      { key:"resume_score", label:"Resume Score", value: r => pick(r, ["resume_score","score","resumeScore"]) ?? "" },
+      { key:"resume_score", label:"Resume Score", value: r => pick(r, ["resume_score","score","resumeScore","ai_score","screening_score","ats_score"]) ?? "" },
       { key:"status", label:"Status", render: r => statusPill(pick(r, ["status","candidate_status","stage"])) },
       { key:"applied_at", label:"Applied At", value: r => fmtDate(pick(r, ["applied_at","created_at","appliedAt","timestamp"])) },
       { key:"actions", label:"Actions", render: r => {
