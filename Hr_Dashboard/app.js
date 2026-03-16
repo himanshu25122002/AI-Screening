@@ -501,7 +501,7 @@ async function renderHRIntake(noFetch=false){
 
   const vacancyOptions = [`<option value="">All jobs</option>`]
     .concat(vacancies.map(v=>{
-      const id = pick(v, ["id","vacancy_id","external_job_id"]);
+      const id = pick(v, ["external_job_id"]);
       const label = vacancyDisplayName(v);
       return `<option value="${escapeHtml(String(id ?? ""))}">${escapeHtml(label)}</option>`;
     })).join("");
@@ -675,6 +675,7 @@ async function renderHRIntake(noFetch=false){
             <div class="field">
               <label>Select job</label>
               <select id="c_job" class="input">
+              <option value="">Select Job</option>
                 ${vacancies.map(v=>{
                   const id = pick(v, ["id","vacancy_id","external_job_id"]);
                   const label = vacancyDisplayName(v);
